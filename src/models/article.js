@@ -2,6 +2,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../db'); // Sequelize bağlantınızı burada tanımlayın
 
+
 const Article = sequelize.define('Article', {
   content: {
     type: DataTypes.STRING,

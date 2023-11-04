@@ -1,6 +1,8 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../db'); // Sequelize bağlantınızı burada tanımlayın
 
+const Article = require('./article');
+
 const User = sequelize.define('User', {
   username: {
     type: DataTypes.STRING,
@@ -36,5 +38,7 @@ const User = sequelize.define('User', {
     defaultValue: true, // Varsayılan değeri true
   },
 });
+
+User.hasMany(Article, { foreignKey: 'authorId', as: 'articles' });
 
 module.exports = User;

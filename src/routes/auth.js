@@ -6,6 +6,7 @@ const multer = require('multer');
 const upload = multer();
 
 const User = require('../models/user');
+const Article = require('../models/article');
 
 // Kullanıcı kaydı
 router.post('/register', upload.none(), async (req, res) => {
@@ -32,15 +33,42 @@ router.post('/register', upload.none(), async (req, res) => {
   }
 });
 
-router.get('/users', async (req, res) => {
+router.get('/users', upload.none(), async (req, res) => {
   try {
-    const users = await User.findAll();
-
+    const users = await User.findAll({
+      include: 'articles',
+    });
     res.status(200).json(users);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
+// user bilgisi
+router.get('/:id', upload.none(), async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    // Kullanıcıyı bulun
+    const user = await User.findByPk(userId, {
+      attributes: { exclude: ['password', 'isAdmin'] },
+      include: {
+        model: Article,
+        as: 'articles',
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.log("AUTH/error : ", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 router.post('/login', upload.none(), async (req, res) => {
   try {
