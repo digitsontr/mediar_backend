@@ -4,6 +4,7 @@ const router = express.Router();
 const multer = require('multer');
 const upload = multer();
 
+const logService = require('../services/logService');
 const Article = require('../models/article');
 const User = require('../models/user');
 const LikedShares = require('../models/likedShares');
@@ -22,7 +23,6 @@ router.get('/', upload.none(), async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 // Makale bilgisi
 router.get('/:id', upload.none(), async (req, res) => {
@@ -57,8 +57,12 @@ router.post('/shareArticle', upload.none(), async (req, res) => {
 
     const article = new Article({ content, authorId });
     await article.save();
+    
+    res.status(200).json({ message: 'Makale başarıyla paylaşıldı.' });
 
-    res.status(201).json({ message: 'Makale başarıyla paylaşıldı.' });
+    const user = await User.findByPk(authorId);
+
+    logService.createLog(user.username, "Kullanıcı yeni makale paylaştı.")
   } catch (error) {
     console.log("ARTICLES/error : ", error.message);
 
@@ -90,6 +94,10 @@ router.put('/updateArticle/:id', upload.none(), async (req, res) => {
     const updatedArticle = await Article.findByPk(articleId);
 
     res.status(200).json({ message: 'Makale güncellendi.', updatedArticle });
+
+    const user = await User.findByPk(authorId);
+
+    logService.createLog(user.username, "Kullanıcı makalesini güncelledi.")
   } catch (error) {
     console.log("ARTICLES/error : ", error.message);
 
@@ -122,13 +130,16 @@ router.delete('/deleteArticle/:id', upload.none(), async (req, res) => {
     });
 
     res.status(200).end();
+
+    const user = await User.findByPk(authorId);
+
+    logService.createLog(user.username, "Kullanıcı makalesini sildi.")
   } catch (error) {
     console.log("ARTICLES/error : ", error.message);
 
     res.status(500).json({ error: error.message });
   }
 });
-
 
 router.post('/likeArticle/:id', upload.none(), async (req, res) => {
   try {
@@ -147,6 +158,7 @@ router.post('/likeArticle/:id', upload.none(), async (req, res) => {
     }
 
     const user = await User.findByPk(userId);
+
     if (!user) {
       return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
     }
@@ -161,6 +173,8 @@ router.post('/likeArticle/:id', upload.none(), async (req, res) => {
 
     if (likedShares) {
       res.status(200).json({ message: 'Makale beğenildi.' });
+
+      logService.createLog(user.username, "Kullanıcı " + articleId + " id li makaleyi beğendi.")
     } else {
       res.status(500).json({ message: 'Makale beğenirken bir hata oluştu.' });
     }
@@ -194,6 +208,10 @@ router.post('/unlikeArticle/:id', upload.none(), async (req, res) => {
     await likedShares.destroy();
 
     res.status(200).json({ message: 'Makale beğenisi kaldırıldı.' });
+
+    const user = await User.findByPk(userId);
+
+    logService.createLog(user.username, "Kullanıcı " + articleId + " id li makaledeki beğenisini kaldırdı.")
   } catch (error) {
     console.log("ARTICLES/error : ", error.message);
 

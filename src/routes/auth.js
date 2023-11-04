@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const multer = require('multer');
 const upload = multer();
 
+const logService = require('../services/logService');
 const User = require('../models/user');
 const Article = require('../models/article');
 
@@ -27,6 +28,8 @@ router.post('/register', upload.none(), async (req, res) => {
     await user.save();
 
     res.status(200).json({ message: 'Kullanıcı başarıyla kaydedildi.' });
+
+    logService.createLog(username, "Kullanıcı başarıyla kaydedildi.")
   } catch (error) {
     console.log("AUTH/ERROR : ", error.message);
     res.status(500).json({ error: error.message });
@@ -102,8 +105,12 @@ router.post('/login', upload.none(), async (req, res) => {
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (passwordMatch) {
       res.status(200).json({ message: 'Giriş başarılı.' });
+
+      logService.createLog(username, "Giriş yaptı.");
     } else {
       res.status(401).json({ message: 'Kullanıcı adı veya şifre hatalı.' });
+
+      logService.createLog(username, "Başarısız giriş.");
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -150,13 +157,13 @@ router.put('/updateUser/:id', upload.none(), async (req, res) => {
       updatedData.birthday = birthday;
     }
 
-    // Kullanıcının bilgilerini güncelleyin
     await User.update(updatedData, { where: { id: userId } });
 
-    // Güncellenmiş kullanıcıyı almak için bir kez daha sorgulama yapın
     const updatedUser = await User.findByPk(userId);
 
     res.status(200).json({ message: 'Kullanıcı bilgileri güncellendi.', updatedUser });
+
+    logService.createLog(updatedUser.username, "Kullanıcı bilgileri güncellendi.");
   } catch (error) {
     console.log("AUTH/ERROR : ", error.message);
 
@@ -164,8 +171,6 @@ router.put('/updateUser/:id', upload.none(), async (req, res) => {
   }
 });
 
-
-// Kullanıcı silme
 // Kullanıcı silme
 router.delete('/deleteUser', upload.none(), async (req, res) => {
   try {
@@ -193,6 +198,8 @@ router.delete('/deleteUser', upload.none(), async (req, res) => {
     await user.destroy();
 
     res.status(204).end();
+
+    logService.createLog(username, "Kullanıcı silindi.");
   } catch (error) {
     console.log("AUTH/ERROR : ", error.message);
 
@@ -213,6 +220,7 @@ router.get('/likedArticles/:id', async (req, res) => {
     }
 
     const likedArticles = user.likedArticles;
+    
     res.status(200).json({ likedArticles });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -254,6 +262,8 @@ router.post('/follow/:id', upload.none(), async (req, res) => {
     await followingUser.addFollower(followerUser);
 
     res.status(200).json({ message: 'Kullanıcıyı başarıyla takip ettiniz.' });
+
+    logService.createLog(followerUser.username, followingUser.username + " kullanıcısı takip edildi.");
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -293,6 +303,8 @@ router.post('/unfollow/:id', upload.none(), async (req, res) => {
     await followingUser.removeFollower(followerUser);
 
     res.status(200).json({ message: 'Kullanıcının takibini bıraktınız.' });
+
+    logService.createLog(followerUser.username, followingUser.username + " kullanıcısını takipten çıkardı.");
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
