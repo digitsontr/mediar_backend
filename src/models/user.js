@@ -40,5 +40,14 @@ const User = sequelize.define('User', {
 });
 
 User.hasMany(Article, { foreignKey: 'authorId', as: 'articles' });
+// user.js
+User.belongsToMany(User, { as: 'Followers', foreignKey: 'followingId', through: 'Follow' });
+User.belongsToMany(User, { as: 'Following', foreignKey: 'followerId', through: 'Follow' });
+User.belongsToMany(Article, {
+  through: 'LikedShares',
+  as: 'LikedArticles', // Burada "LikedArticles" bir takma ad (alias) olarak kullanılıyor
+  foreignKey: 'userId',
+});
+
 
 module.exports = User;

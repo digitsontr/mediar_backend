@@ -36,13 +36,26 @@ router.post('/register', upload.none(), async (req, res) => {
 router.get('/users', upload.none(), async (req, res) => {
   try {
     const users = await User.findAll({
-      include: 'articles',
+      include: [
+        { model: User, as: 'Followers', through: 'Follow' }, // Takipçiler
+        { model: User, as: 'Following', through: 'Follow' }, // Takip Edilenler
+        {
+          model: Article,
+          as: 'LikedArticles',
+          through: 'LikedShares', // Beğenilen makaleler
+        },
+        'articles', // Kullanıcının makaleleri
+      ],
     });
+
     res.status(200).json(users);
   } catch (error) {
+    console.log("AUTH/error : ", error.message);
+
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // user bilgisi
 router.get('/:id', upload.none(), async (req, res) => {
@@ -52,10 +65,16 @@ router.get('/:id', upload.none(), async (req, res) => {
     // Kullanıcıyı bulun
     const user = await User.findByPk(userId, {
       attributes: { exclude: ['password', 'isAdmin'] },
-      include: {
-        model: Article,
-        as: 'articles',
-      },
+      include: [
+        { model: User, as: 'Followers', through: 'Follow' }, // Takipçiler
+        { model: User, as: 'Following', through: 'Follow' }, // Takip Edilenler
+        {
+          model: Article,
+          as: 'LikedArticles',
+          through: 'LikedShares', // Beğenilen makaleler
+        },
+        'articles', // Kullanıcının makaleleri
+      ],
     });
 
     if (!user) {
@@ -68,7 +87,6 @@ router.get('/:id', upload.none(), async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 router.post('/login', upload.none(), async (req, res) => {
   try {
@@ -182,7 +200,6 @@ router.delete('/deleteUser', upload.none(), async (req, res) => {
   }
 });
 
-
 router.get('/likedArticles/:id', async (req, res) => {
   try {
     const userId = req.params.id;
@@ -197,6 +214,85 @@ router.get('/likedArticles/:id', async (req, res) => {
 
     const likedArticles = user.likedArticles;
     res.status(200).json({ likedArticles });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// auth.js
+router.post('/follow/:id', upload.none(), async (req, res) => {
+  try {
+    const followerId = req.body.followerId; // Takip eden kullanıcının ID'si
+    const followingId = req.params.id; // Takip edilen kullanıcının ID'si
+
+    if (followerId == followingId) {
+      return res.status(404).json({ message: 'Kullanıcı kendini takip edemez.' });
+    } 
+
+    // Takip edilen kullanıcıyı bulun
+    const followingUser = await User.findByPk(followingId);
+
+    if (!followingUser) {
+      return res.status(404).json({ message: 'Takip edilen kullanıcı bulunamadı.' });
+    }
+
+    // Takip eden kullanıcıyı bulun
+    const followerUser = await User.findByPk(followerId);
+
+    if (!followerUser) {
+      return res.status(404).json({ message: 'Takipçi kullanıcı bulunamadı.' });
+    }
+
+    // Takipçi kullanıcıyı takip edilen kullanıcıyı takip ediyor mu kontrol et
+    const isAlreadyFollowing = await followingUser.hasFollower(followerUser);
+
+    if (isAlreadyFollowing) {
+      return res.status(400).json({ message: 'Bu kullanıcıyı zaten takip ediyorsunuz.' });
+    }
+
+    // Takip et
+    await followingUser.addFollower(followerUser);
+
+    res.status(200).json({ message: 'Kullanıcıyı başarıyla takip ettiniz.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/unfollow/:id', upload.none(), async (req, res) => {
+  try {
+    const followerId = req.body.followerId; // Takip eden kullanıcının ID'si
+    const followingId = req.params.id; // Takip edilen kullanıcının ID'si
+
+    if (followerId == followingId) {
+      return res.status(404).json({ message: 'Kullanıcı kendini takip edemez.' });
+    } 
+
+    // Takip edilen kullanıcıyı bulun
+    const followingUser = await User.findByPk(followingId);
+
+    if (!followingUser) {
+      return res.status(404).json({ message: 'Takip edilen kullanıcı bulunamadı.' });
+    }
+
+    // Takip eden kullanıcıyı bulun
+    const followerUser = await User.findByPk(followerId);
+
+    if (!followerUser) {
+      return res.status(404).json({ message: 'Takipçi kullanıcı bulunamadı.' });
+    }
+
+    // Takipçi kullanıcıyı takip edilen kullanıcıyı takip ediyor mu kontrol et
+    const isAlreadyFollowing = await followingUser.hasFollower(followerUser);
+
+    if (!isAlreadyFollowing) {
+      return res.status(400).json({ message: 'Bu kullanıcıyı zaten takip etmiyorsunuz.' });
+    }
+
+    // Takibi bırak
+    await followingUser.removeFollower(followerUser);
+
+    res.status(200).json({ message: 'Kullanıcının takibini bıraktınız.' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
