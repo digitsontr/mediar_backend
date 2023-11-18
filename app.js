@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const sequelize = require('./src/db'); // MySQL bağlantı dosyanızı içe aktarın
 const multer = require('multer'); // multer middleware'ini içe aktarın
+const cors = require('cors');
 const upload = multer(); // Multer'i kullanarak `form-data` verilerini işleyin
 
 const app = express();
@@ -17,6 +18,12 @@ sequelize.sync().then(() => {
 app.use(bodyParser.urlencoded());
 app.use(bodyParser.json());
 
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*'); // İzin verilen kaynak (örnekteki URL'i değiştirin)
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  next();
+});
+
 /*
 app.use(upload.none()); // Multer ile `form-data` verilerini işleyin
 app.use((req, res, next) => {
@@ -30,6 +37,8 @@ app.use((req, res, next) => {
 // Routes
 const authRoutes = require('./src/routes/auth');
 const articlesRoutes = require('./src/routes/articles');
+
+app.use(cors());
 
 app.use('/auth', authRoutes);
 app.use('/articles', articlesRoutes);

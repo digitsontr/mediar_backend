@@ -7,7 +7,6 @@ async function createLog(username, process) {
       user: username,
       process: process,
     });
-    //console.log('Log mesajı kaydedildi:', log);
   } catch (error) {
     console.error('Log mesajı kaydedilirken hata oluştu:', error);
   }

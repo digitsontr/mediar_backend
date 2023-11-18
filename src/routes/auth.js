@@ -4,12 +4,44 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const multer = require('multer');
 const upload = multer();
-
 const logService = require('../services/logService');
+const { generateToken, tokenControl } = require('../services/jwtService');
 const User = require('../models/user');
 const Article = require('../models/article');
 
-// Kullanıcı kaydı
+
+router.post('/login', upload.none(), async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    console.log("username : ", username, " \n password : ", password);
+    const user = await User.findOne({
+      where: { username: username }, 
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (passwordMatch) {
+
+      const payload = { id: user.id, username: user.username };
+      const token = generateToken(payload);
+
+      console.log("TOKEN : " + token);
+      res.status(200).json({ message: 'Giriş başarılı.', token: token, user: user});
+
+      logService.createLog(username, "Giriş yaptı.");
+    } else {
+      res.status(401).json({ message: 'Kullanıcı adı veya şifre hatalı.' });
+
+      logService.createLog(username, "Başarısız giriş.");
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post('/register', upload.none(), async (req, res) => {
   try {
     const { username, name, email, password } = req.body;
@@ -36,12 +68,94 @@ router.post('/register', upload.none(), async (req, res) => {
   }
 });
 
-router.get('/users', upload.none(), async (req, res) => {
+
+router.get('/followers/', tokenControl, upload.none(), async (req, res) => {
+  try {
+    const userId = req._userId;
+    
+    // Kullanıcının takipçilerini bulun
+    const user = await User.findByPk(userId, {
+      include: [
+        {
+          model: User,
+          as: 'Followers',
+          through: 'Follow',
+          attributes: ['id', 'username', 'image', 'email', 'name'], // Takipçilerin belirli alanlarını seçebilirsiniz
+        },
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
+    }
+
+    const followers = user.Followers; // Kullanıcının takipçileri "Followers" ilişkisi aracılığıyla alınır
+
+    res.status(200).json({ followers });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/followings/', tokenControl, upload.none(), async (req, res) => {
+  try {
+    const userId = req._userId;;
+    
+    // Kullanıcının takip ettiklerini bulun
+    const user = await User.findByPk(userId, {
+      include: [
+        {
+          model: User,
+          as: 'Following',
+          through: 'Follow',
+          attributes: ['id', 'username', 'image', 'email', 'name'], // Takip ettiklerin belirli alanlarını seçebilirsiniz
+        },
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
+    }
+
+    const following = user.Following; // Kullanıcının takip ettikleri "Following" ilişkisi aracılığıyla alınır
+
+    res.status(200).json({ following });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/users', tokenControl, upload.none(), async (req, res) => {
   try {
     const users = await User.findAll({
+      attributes: {
+        exclude: ['password', 'isAdmin'], // Exclude the password field
+      },
       include: [
-        { model: User, as: 'Followers', through: 'Follow' }, // Takipçiler
-        { model: User, as: 'Following', through: 'Follow' }, // Takip Edilenler
+        { model: User, as: 'Followers', through: 'Follow', 
+          attributes: {
+            exclude: ['password', 'isAdmin'], // Exclude the password field
+          },
+          include: [
+            {
+              model: Article,
+              as: 'LikedArticles',
+              through: 'LikedShares',
+            },
+          ],
+        }, // Takipçiler
+        { model: User, as: 'Following', through: 'Follow', 
+          attributes: {
+            exclude: ['password', 'isAdmin'], // Exclude the password field
+          }, 
+          include: [
+            {
+              model: Article,
+              as: 'LikedArticles',
+              through: 'LikedShares',
+            },
+          ],
+        }, // Takip Edilenler
         {
           model: Article,
           as: 'LikedArticles',
@@ -60,23 +174,30 @@ router.get('/users', upload.none(), async (req, res) => {
 });
 
 
-// user bilgisi
-router.get('/:id', upload.none(), async (req, res) => {
+router.get('/:id', tokenControl, upload.none(), async (req, res) => {
   try {
     const userId = req.params.id;
 
-    // Kullanıcıyı bulun
     const user = await User.findByPk(userId, {
       attributes: { exclude: ['password', 'isAdmin'] },
+      
       include: [
-        { model: User, as: 'Followers', through: 'Follow' }, // Takipçiler
-        { model: User, as: 'Following', through: 'Follow' }, // Takip Edilenler
+        { model: User, as: 'Followers', through: 'Follow', 
+          attributes: {
+            exclude: ['password', 'isAdmin'], // Exclude the password field
+          },  
+        }, 
+        { model: User, as: 'Following', through: 'Follow',
+          attributes: {
+            exclude: ['password', 'isAdmin'], // Exclude the password field
+          },  
+        }, 
         {
           model: Article,
           as: 'LikedArticles',
-          through: 'LikedShares', // Beğenilen makaleler
+          through: 'LikedShares', 
         },
-        'articles', // Kullanıcının makaleleri
+        'articles', 
       ],
     });
 
@@ -91,52 +212,22 @@ router.get('/:id', upload.none(), async (req, res) => {
   }
 });
 
-router.post('/login', upload.none(), async (req, res) => {
+router.put('/updateUser', tokenControl, upload.none(), async (req, res) => {
   try {
-    const { username, password } = req.body;
-    const user = await User.findOne({
-      where: { username: username }, // Kullanıcı adına göre arama yapmak için where alanı ekleyin
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
-    }
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (passwordMatch) {
-      res.status(200).json({ message: 'Giriş başarılı.' });
-
-      logService.createLog(username, "Giriş yaptı.");
-    } else {
-      res.status(401).json({ message: 'Kullanıcı adı veya şifre hatalı.' });
-
-      logService.createLog(username, "Başarısız giriş.");
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.put('/updateUser/:id', upload.none(), async (req, res) => {
-  try {
-    const userId = req.params.id;
-    const { username, name, email, image, birthday } = req.body;
-
-    // Kullanıcıyı bulun
+    const userId = req._userId;
+    const { username, name, email, image, birthday, password } = req.body;
     const user = await User.findByPk(userId);
 
     if (!user) {
       return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
     }
 
-    // isAdmin ve isActive alanlarını kontrol etmeyin
     if (req.body.isAdmin || req.body.isActive) {
       return res.status(403).json({ message: 'isAdmin veya isActive alanlarını güncellemeye yetkiniz yok.' });
     }
 
     const updatedData = {};
 
-    // Kullanıcıdan gelen verileri güncelleyin
     if (username) {
       updatedData.username = username;
     }
@@ -157,6 +248,10 @@ router.put('/updateUser/:id', upload.none(), async (req, res) => {
       updatedData.birthday = birthday;
     }
 
+    if (password) {
+      updatedData.password = await bcrypt.hash(password, 10);
+    }
+
     await User.update(updatedData, { where: { id: userId } });
 
     const updatedUser = await User.findByPk(userId);
@@ -172,7 +267,7 @@ router.put('/updateUser/:id', upload.none(), async (req, res) => {
 });
 
 // Kullanıcı silme
-router.delete('/deleteUser', upload.none(), async (req, res) => {
+router.delete('/deleteUser', tokenControl, upload.none(), async (req, res) => {
   try {
     const username = req.body.username;
     const password = req.body.password;
@@ -207,9 +302,9 @@ router.delete('/deleteUser', upload.none(), async (req, res) => {
   }
 });
 
-router.get('/likedArticles/:id', async (req, res) => {
+router.get('/likedArticles/:id', tokenControl,  upload.none(), async (req, res) => {
   try {
-    const userId = req.params.id;
+    const userId = req._userId;
     
     const user = await User.findByPk(userId, {
       include: [{ model: Article, as: 'likedArticles' }],
@@ -228,15 +323,16 @@ router.get('/likedArticles/:id', async (req, res) => {
 });
 
 // auth.js
-router.post('/follow/:id', upload.none(), async (req, res) => {
+router.post('/follow/:id', tokenControl, upload.none(), async (req, res) => {
   try {
-    const followerId = req.body.followerId; // Takip eden kullanıcının ID'si
+    const followerId = req._userId; // Takip eden kullanıcının ID'si
     const followingId = req.params.id; // Takip edilen kullanıcının ID'si
 
     if (followerId == followingId) {
       return res.status(404).json({ message: 'Kullanıcı kendini takip edemez.' });
     } 
 
+    console.log("following id : ", followingId);
     // Takip edilen kullanıcıyı bulun
     const followingUser = await User.findByPk(followingId);
 
@@ -269,9 +365,9 @@ router.post('/follow/:id', upload.none(), async (req, res) => {
   }
 });
 
-router.post('/unfollow/:id', upload.none(), async (req, res) => {
+router.post('/unfollow/:id', tokenControl, upload.none(), async (req, res) => {
   try {
-    const followerId = req.body.followerId; // Takip eden kullanıcının ID'si
+    const followerId = req._userId; // Takip eden kullanıcının ID'si
     const followingId = req.params.id; // Takip edilen kullanıcının ID'si
 
     if (followerId == followingId) {
