@@ -1,14 +1,104 @@
 // src/routes/auth.js
 const express = require('express');
+const multer = require('multer');
+const { generateToken, tokenControl } = require('../services/jwtService');
+
+const passport = require('passport');
+const session = require('express-session');
+
 const router = express.Router();
 const bcrypt = require('bcrypt');
-const multer = require('multer');
 const upload = multer();
 const logService = require('../services/logService');
-const { generateToken, tokenControl } = require('../services/jwtService');
+
 const User = require('../models/user');
 const Article = require('../models/article');
 
+
+// -----------------------------------------
+// google mail oauth2
+var GoogleStrategy = require( 'passport-google-oauth2' ).Strategy;
+
+require('dotenv').config()
+
+const GOOGLE_CLIENT_ID = process.env["GOOGLE_CLIENT_ID"]
+const GOOGLE_CLIENT_SECRET = process.env["GOOGLE_CLIENT_SECRET"]
+
+console.log("env : ", GOOGLE_CLIENT_ID);
+console.log("env2 : ", GOOGLE_CLIENT_SECRET);
+
+passport.use(new GoogleStrategy({
+    clientID: GOOGLE_CLIENT_ID,
+    clientSecret: GOOGLE_CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/google/callback",
+    passReqToCallback   : true
+  },
+  function(request, accessToken, refreshToken, profile, done) {
+    done(null, profile);
+  }
+));
+
+passport.serializeUser((user, done) => {
+  done(null, user);
+})
+
+passport.deserializeUser((user, done) => {
+  done(null, user);
+})
+
+router.get('/google',
+  passport.authenticate('google', { scope:
+      [ 'email', 'profile' ] }
+));
+
+/*
+router.get('/google/callback',
+    passport.authenticate( 'google', {
+        successRedirect: '/auth/google/success',
+        failureRedirect: '/auth/google/failure'
+}));
+*/
+
+router.get('/google/callback',
+  passport.authenticate('google', { failureRedirect: '/auth/google/failure' }),
+  async (req, res) => {
+    // Google'dan dönen kullanıcı bilgileri
+    const googleUser = req.user;
+
+    console.log("GOOGLE user : ", googleUser);
+
+    try {
+      // E-posta adresine göre kullanıcıyı bul veya yeni bir kullanıcı oluştur
+      let user = await User.findOne({ where: { email: googleUser.email } });
+
+      if (!user) {
+        // Yeni kullanıcı oluştur
+        user = await User.create({
+          username: googleUser.displayName || googleUser.email.split('@')[0],
+          name: googleUser.displayName,
+          email: googleUser.email,
+          password: '', // Şifre boş bırakılır çünkü Google OAuth kullanılarak giriş yapılıyor
+        });
+      }
+
+      // Kullanıcı için JWT token oluştur
+      const payload = { id: user.id, username: user.username, email: user.email, image: googleUser.picture };
+      const token = generateToken(payload);
+
+      // Token ile yanıt dön
+      res.redirect(`http://localhost:3001/google_login_success?token=${token}&userData=${JSON.stringify(payload)}`);
+
+      //res.status(200).json({ message: 'Giriş başarılı.', token: token, user: user });
+    } catch (error) {
+      console.error('Google callback error:', error);
+      res.status(500).json({ error: error.message });
+    }
+});
+
+function isLoggedIn(req, res, next) {
+  req.user ? next() : res.sendStatus(401);
+}
+// -----------------------------------------
 
 router.post('/login', upload.none(), async (req, res) => {
   try {
@@ -67,7 +157,6 @@ router.post('/register', upload.none(), async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 router.get('/followers/', tokenControl, upload.none(), async (req, res) => {
   try {
@@ -173,7 +262,6 @@ router.get('/users', tokenControl, upload.none(), async (req, res) => {
   }
 });
 
-
 router.get('/:id', tokenControl, upload.none(), async (req, res) => {
   try {
     const userId = req.params.id;
@@ -266,7 +354,6 @@ router.put('/updateUser', tokenControl, upload.none(), async (req, res) => {
   }
 });
 
-// Kullanıcı silme
 router.delete('/deleteUser', tokenControl, upload.none(), async (req, res) => {
   try {
     const username = req.body.username;
@@ -322,7 +409,6 @@ router.get('/likedArticles/:id', tokenControl,  upload.none(), async (req, res) 
   }
 });
 
-// auth.js
 router.post('/follow/:id', tokenControl, upload.none(), async (req, res) => {
   try {
     const followerId = req._userId; // Takip eden kullanıcının ID'si
@@ -403,6 +489,69 @@ router.post('/unfollow/:id', tokenControl, upload.none(), async (req, res) => {
     logService.createLog(followerUser.username, followingUser.username + " kullanıcısını takipten çıkardı.");
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+/*router.get('/google/success', upload.none(), isLoggedIn, async (req, res) => {
+  try {
+    //console.log("AUTH/SUCCESS : Google auth - başarılı. / request : ", req);
+    console.log("AUTH/SUCCESS : Google auth - başarılı. / request user : ", req.user);
+    console.log("AUTH/SUCCESS : Google auth - başarılı. / request user displayName : ", req.user.displayName);
+    console.log("AUTH/SUCCESS : Google auth - başarılı. / request user email : ", req.user.email);
+
+    const googleUser = req.user;
+
+    try {
+      // E-posta adresine göre kullanıcıyı bul veya yeni bir kullanıcı oluştur
+      let user = await User.findOne({ where: { email: googleUser.email } });
+
+      if (!user) {
+        // Yeni kullanıcı oluştur
+        user = await User.create({
+          username: googleUser.displayName || googleUser.email.split('@')[0],
+          name: googleUser.displayName,
+          email: googleUser.email,
+          password: '', // Şifre boş bırakılır çünkü Google OAuth kullanılarak giriş yapılıyor
+        });
+      }
+
+      // Kullanıcı için JWT token oluştur
+      const payload = { id: user.id, username: user.username };
+      const token = generateToken(payload);
+
+      // Token ile yanıt dön
+      res.status(200).json({ message: 'Giriş başarılı.', token: token, user: user });
+    } catch (error) {
+      console.error('Google callback error:', error);
+      res.status(500).json({ error: error.message });
+    }
+
+    res.status(200).json({ message: 'Kullanıcı google auth ile kaydedilebilir.' });
+
+    logService.createLog(username, "Kullanıcı google auth ile kaydedilebilir.")
+  } catch (error) {
+    console.log("AUTH/ERROR : ", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});*/
+
+router.get('/google/failure', upload.none(), async (req, res) => {
+  try {
+    console.log("AUTH/FAILURE : Google auth - başarısız.", req);
+
+    res.status(200).json({ message: 'Google auth - başarısız.' });
+  } catch (error) {
+    console.log("AUTH/ERROR : ", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/logout', async (req, res) => {
+  try {
+    req.session.destroy();
+    res.send("logout-see you again..");
+  } catch (error) {
+    res.send("logout-see you again..");
   }
 });
 
