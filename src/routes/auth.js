@@ -14,18 +14,16 @@ const logService = require('../services/logService');
 const User = require('../models/user');
 const Article = require('../models/article');
 
+const socket = require('../../socket');
+const io = socket.getIO();
 
 // -----------------------------------------
 // google mail oauth2
 var GoogleStrategy = require( 'passport-google-oauth2' ).Strategy;
-
 require('dotenv').config()
 
 const GOOGLE_CLIENT_ID = process.env["GOOGLE_CLIENT_ID"]
 const GOOGLE_CLIENT_SECRET = process.env["GOOGLE_CLIENT_SECRET"]
-
-console.log("env : ", GOOGLE_CLIENT_ID);
-console.log("env2 : ", GOOGLE_CLIENT_SECRET);
 
 passport.use(new GoogleStrategy({
     clientID: GOOGLE_CLIENT_ID,
@@ -50,14 +48,6 @@ router.get('/google',
   passport.authenticate('google', { scope:
       [ 'email', 'profile' ] }
 ));
-
-/*
-router.get('/google/callback',
-    passport.authenticate( 'google', {
-        successRedirect: '/auth/google/success',
-        failureRedirect: '/auth/google/failure'
-}));
-*/
 
 router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: '/auth/google/failure' }),
@@ -98,6 +88,8 @@ router.get('/google/callback',
 function isLoggedIn(req, res, next) {
   req.user ? next() : res.sendStatus(401);
 }
+// -----------------------------------------
+
 // -----------------------------------------
 
 router.post('/login', upload.none(), async (req, res) => {
@@ -443,6 +435,8 @@ router.post('/follow/:id', tokenControl, upload.none(), async (req, res) => {
     // Takip et
     await followingUser.addFollower(followerUser);
 
+    io.to(followingId).emit('new_follower', { followerId, followerUsername: followerUser.username });
+    
     res.status(200).json({ message: 'Kullanıcıyı başarıyla takip ettiniz.' });
 
     logService.createLog(followerUser.username, followingUser.username + " kullanıcısı takip edildi.");

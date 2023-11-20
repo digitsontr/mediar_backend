@@ -5,7 +5,29 @@ const cors = require('cors');
 const session = require('express-session');
 const app = express();
 const passport = require('passport');
+const http = require('http');
 
+// -----------------------------------------
+// SocketIO Setup..
+const server = http.createServer(app);
+const socket = require('./socket');
+
+socket.init(server);
+
+const io = socket.getIO();
+
+io.on('connection', (socket) => {
+  const userId = socket.handshake.query.userId;
+
+  socket.join(userId);
+  // io.to(userId).emit('Backend: Socket Connected ', { userId }); // test
+
+  console.log('********* a user connected *********** : ', socket.id);
+});
+// -----------------------------------------
+
+// -----------------------------------------
+// DB Connection
 sequelize.sync().then(() => {
   console.log('\n ----- MySQL veritabanı bağlantısı başarılı. -----');
 }).catch((error) => {
@@ -13,10 +35,9 @@ sequelize.sync().then(() => {
 });
 
 // -----------------------------------------
-// Middleware
+// Middleware Setup
 app.use(bodyParser.urlencoded());
 app.use(bodyParser.json());
-
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*'); // İzin verilen kaynak (örnekteki URL'i değiştirin)
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
@@ -25,29 +46,32 @@ app.use((req, res, next) => {
 // -----------------------------------------
 
 // -----------------------------------------
-// google oauth2
-app.set('trust proxy', 1) // trust first proxy
+// Google OAuth2..
+app.set('trust proxy', 1) // trust first proxy  
 app.use(session({
   secret: 'mysecret',
   resave: false,
   saveUninitialized: true,
   cookie: { secure: false }
 }))
-
 app.use(passport.initialize());
 app.use(passport.session());
+// -----------------------------------------
 
 // -----------------------------------------
-// Routes
+// Routes..
 const authRoutes = require('./src/routes/auth');
 const articlesRoutes = require('./src/routes/articles');
 
 app.use(cors());
-
 app.use('/auth', authRoutes);
 app.use('/articles', articlesRoutes);
+// -----------------------------------------
 
-app.listen(3000, () => {
+// -----------------------------------------
+// Start Server..
+server.listen(3000, () => {
   console.log('\n ----- Server started on port 3000 -----');
 });
 // -----------------------------------------
+
