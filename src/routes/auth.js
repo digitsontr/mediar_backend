@@ -13,6 +13,7 @@ const logService = require('../services/logService');
 
 const User = require('../models/user');
 const Article = require('../models/article');
+const Notification = require('../models/notification');
 
 const socket = require('../../socket');
 const io = socket.getIO();
@@ -44,6 +45,21 @@ passport.deserializeUser((user, done) => {
   done(null, user);
 })
 
+router.get('/notifications', tokenControl, upload.none(), async (req, res) => {
+  try {
+    const userId = req._userId;
+    const notifications = await Notification.findAll({ where: { userId: userId } });
+
+    //console.log("NOTIFICATIONS : ", notifications);
+
+    res.status(200).json(notifications);
+  } catch (error) {
+    console.log("AUTH/NOTIFICATIONS/error : ", error.message);
+
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/google',
   passport.authenticate('google', { scope:
       [ 'email', 'profile' ] }
@@ -55,7 +71,7 @@ router.get('/google/callback',
     // Google'dan dönen kullanıcı bilgileri
     const googleUser = req.user;
 
-    console.log("GOOGLE user : ", googleUser);
+    //console.log("GOOGLE user : ", googleUser);
 
     try {
       // E-posta adresine göre kullanıcıyı bul veya yeni bir kullanıcı oluştur
@@ -64,7 +80,7 @@ router.get('/google/callback',
       if (!user) {
         // Yeni kullanıcı oluştur
         user = await User.create({
-          username: googleUser.displayName || googleUser.email.split('@')[0],
+          username: (googleUser.displayNameusername || googleUser.email.split('@')[0]).toLowerCase().replace(" ", ""),
           name: googleUser.displayName,
           email: googleUser.email,
           password: '', // Şifre boş bırakılır çünkü Google OAuth kullanılarak giriş yapılıyor
@@ -78,6 +94,8 @@ router.get('/google/callback',
       // Token ile yanıt dön
       res.redirect(`http://localhost:3001/google_login_success?token=${token}&userData=${JSON.stringify(payload)}`);
 
+      logService.createLog(user.username, user.username + " Giriş yaptı.");
+
       //res.status(200).json({ message: 'Giriş başarılı.', token: token, user: user });
     } catch (error) {
       console.error('Google callback error:', error);
@@ -85,9 +103,6 @@ router.get('/google/callback',
     }
 });
 
-function isLoggedIn(req, res, next) {
-  req.user ? next() : res.sendStatus(401);
-}
 // -----------------------------------------
 
 // -----------------------------------------
@@ -435,11 +450,25 @@ router.post('/follow/:id', tokenControl, upload.none(), async (req, res) => {
     // Takip et
     await followingUser.addFollower(followerUser);
 
-    io.to(followingId).emit('new_follower', { followerId, followerUsername: followerUser.username });
+    const followerData = {
+      id: followerUser.id,
+      username: followerUser.username,
+      image: followerUser.image,
+      email: followerUser.email,
+      name: followerUser.name
+    };
+
+    const notification = await Notification.create({
+      message: `${followerUser.username} ${followingUser.username} kullanıcısını takip etti.`,
+      userId: followingUser.id,
+      time: new Date(),
+    });
+
+    io.to(followingId).emit('new_notification', { notification });
     
     res.status(200).json({ message: 'Kullanıcıyı başarıyla takip ettiniz.' });
 
-    logService.createLog(followerUser.username, followingUser.username + " kullanıcısı takip edildi.");
+    logService.createLog(followerUser.username, followerUser.username + " kullanıcısı" + followingUser.username + " kullanıcısı takip etti.");
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -478,6 +507,12 @@ router.post('/unfollow/:id', tokenControl, upload.none(), async (req, res) => {
     // Takibi bırak
     await followingUser.removeFollower(followerUser);
 
+    await Notification.create({
+      message: `${followerUser.username} ${followingUser.username} kullanıcısını takipten çıktı.`,
+      userId: followingUser.id,
+      time: new Date(),
+    });
+
     res.status(200).json({ message: 'Kullanıcının takibini bıraktınız.' });
 
     logService.createLog(followerUser.username, followingUser.username + " kullanıcısını takipten çıkardı.");
@@ -485,49 +520,6 @@ router.post('/unfollow/:id', tokenControl, upload.none(), async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-/*router.get('/google/success', upload.none(), isLoggedIn, async (req, res) => {
-  try {
-    //console.log("AUTH/SUCCESS : Google auth - başarılı. / request : ", req);
-    console.log("AUTH/SUCCESS : Google auth - başarılı. / request user : ", req.user);
-    console.log("AUTH/SUCCESS : Google auth - başarılı. / request user displayName : ", req.user.displayName);
-    console.log("AUTH/SUCCESS : Google auth - başarılı. / request user email : ", req.user.email);
-
-    const googleUser = req.user;
-
-    try {
-      // E-posta adresine göre kullanıcıyı bul veya yeni bir kullanıcı oluştur
-      let user = await User.findOne({ where: { email: googleUser.email } });
-
-      if (!user) {
-        // Yeni kullanıcı oluştur
-        user = await User.create({
-          username: googleUser.displayName || googleUser.email.split('@')[0],
-          name: googleUser.displayName,
-          email: googleUser.email,
-          password: '', // Şifre boş bırakılır çünkü Google OAuth kullanılarak giriş yapılıyor
-        });
-      }
-
-      // Kullanıcı için JWT token oluştur
-      const payload = { id: user.id, username: user.username };
-      const token = generateToken(payload);
-
-      // Token ile yanıt dön
-      res.status(200).json({ message: 'Giriş başarılı.', token: token, user: user });
-    } catch (error) {
-      console.error('Google callback error:', error);
-      res.status(500).json({ error: error.message });
-    }
-
-    res.status(200).json({ message: 'Kullanıcı google auth ile kaydedilebilir.' });
-
-    logService.createLog(username, "Kullanıcı google auth ile kaydedilebilir.")
-  } catch (error) {
-    console.log("AUTH/ERROR : ", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});*/
 
 router.get('/google/failure', upload.none(), async (req, res) => {
   try {

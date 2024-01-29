@@ -22,7 +22,10 @@ module.exports = {
 
   tokenControl(req, res, next) {
     try {
-      var token = req.header('Authorization');
+      var token = req.header('Authorization') || req.body.headers.Authorization;
+
+      console.log("req :: ", req.body.headers);
+      console.log("token :: ", token);
 
       if (token && token.startsWith("Bearer ")) {
         token = token.substring(7, token.length);
@@ -33,16 +36,16 @@ module.exports = {
       console.log("/token1 : ", token);
 
       const decodedToken = module.exports.verifyToken(token);
-      console.log("/decodedToken1 : ", decodedToken);
-      console.log("/decodedToken2 : ", decodedToken["id"]);
+      //console.log("/decodedToken1 : ", decodedToken);
+      //console.log("/decodedToken2 : ", decodedToken["id"]);
 
       if (decodedToken) {
-        console.log("AAAAAAAAAA");
+        //console.log("AAAAAAAAAA");
         req._userId = decodedToken["id"]; // Attach decoded token to the request object
 
         next(); // Call next to proceed to the route handler
       } else {
-        console.log("BBBBBBBBBB");
+        //console.log("BBBBBBBBBB");
         res.status(403).json({ "error": "Invalid token" });
       }
     } catch (error) {

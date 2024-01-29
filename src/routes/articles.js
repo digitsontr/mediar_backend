@@ -8,11 +8,15 @@ const { tokenControl } = require('../services/jwtService');
 const Article = require('../models/article');
 const User = require('../models/user');
 const LikedShares = require('../models/likedShares');
+const Notification = require('../models/notification');
 const { Op } = require('sequelize'); 
+
+const socket = require('../../socket');
+const io = socket.getIO();
 
 router.get('/', tokenControl, upload.none(), async (req, res) => {
   try {
-    console.log("XXXXXXXXXXXXX1");
+    //console.log("XXXXXXXXXXXXX1");
     const userId = req._userId;
    
     // Kullanıcıya ait olmayan makaleleri doğrudan al
@@ -227,6 +231,7 @@ router.post('/likeArticle/:id', tokenControl, upload.none(), async (req, res) =>
     }
 
     const user = await User.findByPk(userId);
+    const author = await User.findByPk(article.authorId);
 
     if (!user) {
       return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
@@ -241,6 +246,14 @@ router.post('/likeArticle/:id', tokenControl, upload.none(), async (req, res) =>
     });
 
     if (likedShares) {
+      const notification = await Notification.create({
+        message: `${user.username} ${author.username} kullanıcısının makalesini beğendi.`,
+        userId: author.id,
+        time: new Date(),
+      });
+  
+      io.to(author.id).emit('new_notification', { notification });
+
       res.status(200).json({ message: 'Makale beğenildi.' });
 
       logService.createLog(user.username, "Kullanıcı " + articleId + " id li makaleyi beğendi.")
