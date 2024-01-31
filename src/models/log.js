@@ -1,8 +1,8 @@
 // models/log.js
-const { DataTypes } = require('sequelize');
-const sequelize = require('../db');
+const { DataTypes } = require("sequelize");
+const sequelize = require("../db");
 
-const Log = sequelize.define('Log', {
+const Log = sequelize.define("Log", {
   user: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -12,7 +12,7 @@ const Log = sequelize.define('Log', {
     allowNull: false,
   },
   datetime: {
-    type: DataTypes.DATE, 
+    type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
   },
 });

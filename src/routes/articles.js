@@ -1,44 +1,44 @@
 // src/routes/articles.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const multer = require('multer');
+const multer = require("multer");
 const upload = multer();
-const logService = require('../services/logService');
-const { tokenControl } = require('../services/jwtService');
-const Article = require('../models/article');
-const User = require('../models/user');
-const LikedShares = require('../models/likedShares');
-const Notification = require('../models/notification');
-const { Op } = require('sequelize'); 
+const logService = require("../services/logService");
+const { tokenControl } = require("../services/jwtService");
+const Article = require("../models/article");
+const User = require("../models/user");
+const LikedShares = require("../models/likedShares");
+const Notification = require("../models/notification");
+const { Op } = require("sequelize");
 
-const socket = require('../../socket');
+const socket = require("../../socket");
 const io = socket.getIO();
 
-router.get('/', tokenControl, upload.none(), async (req, res) => {
+router.get("/", tokenControl, upload.none(), async (req, res) => {
   try {
     //console.log("XXXXXXXXXXXXX1");
     const userId = req._userId;
-   
+
     // Kullanıcıya ait olmayan makaleleri doğrudan al
     const articles = await Article.findAll({
       where: {
         authorId: {
-          [Op.ne]: userId  // Op.ne, 'not equal' (eşit değil) anlamına gelir
-        }
-      }
+          [Op.ne]: userId, // Op.ne, 'not equal' (eşit değil) anlamına gelir
+        },
+      },
     });
 
     for (const article of articles) {
-        const author = await User.findByPk(article.authorId);
+      const author = await User.findByPk(article.authorId);
 
-        article.dataValues.authorName = author.username;
-      
-        const likedUsers = await article.getLikedUsers({
-          attributes: {
-            exclude: ['password'], // Exclude the password field
-          },
-        });
-        article.dataValues.likedUsers = likedUsers;      
+      article.dataValues.authorName = author.username;
+
+      const likedUsers = await article.getLikedUsers({
+        attributes: {
+          exclude: ["password"], // Exclude the password field
+        },
+      });
+      article.dataValues.likedUsers = likedUsers;
     }
 
     res.status(200).json(articles);
@@ -47,33 +47,32 @@ router.get('/', tokenControl, upload.none(), async (req, res) => {
   }
 });
 
-
 // Kullanıcının makaleleri, makaleleri beğenenlerle birlikte
-router.get('/ofUser/', tokenControl, upload.none(), async (req, res) => {
+router.get("/ofUser/", tokenControl, upload.none(), async (req, res) => {
   console.log("XXXXXXXXXXXXX8");
 
-  const userId = req._userId; 
+  const userId = req._userId;
 
   try {
     console.log("XXXXXXXXXXXXX1");
 
     const articles = await Article.findAll({
       where: {
-        authorId: userId
-      }
+        authorId: userId,
+      },
     });
 
     for (const article of articles) {
-        const author = await User.findByPk(article.authorId);
-        article.dataValues.authorName = author.username;
-        
-        const likedUsers = await article.getLikedUsers({
-          attributes: {
-            exclude: ['password'], 
-          },
-        });
+      const author = await User.findByPk(article.authorId);
+      article.dataValues.authorName = author.username;
 
-        article.dataValues.likedUsers = likedUsers;
+      const likedUsers = await article.getLikedUsers({
+        attributes: {
+          exclude: ["password"],
+        },
+      });
+
+      article.dataValues.likedUsers = likedUsers;
     }
 
     res.status(200).json(articles);
@@ -82,9 +81,8 @@ router.get('/ofUser/', tokenControl, upload.none(), async (req, res) => {
   }
 });
 
-
 // Makale bilgisi
-router.get('/:id', tokenControl, upload.none(), async (req, res) => {
+router.get("/:id", tokenControl, upload.none(), async (req, res) => {
   try {
     console.log("XXXXXXXXXXXXX2");
 
@@ -94,11 +92,11 @@ router.get('/:id', tokenControl, upload.none(), async (req, res) => {
     const article = await Article.findByPk(articleId);
 
     if (!article) {
-      return res.status(404).json({ message: 'Makale bulunamadı.' });
+      return res.status(404).json({ message: "Makale bulunamadı." });
     }
 
     const likedUsers = await article.getLikedUsers({
-      attributes: { exclude: ['password'] },
+      attributes: { exclude: ["password"] },
     });
 
     res.status(200).json({ article, likedUsers });
@@ -110,7 +108,7 @@ router.get('/:id', tokenControl, upload.none(), async (req, res) => {
 });
 
 // Makale paylaşma
-router.post('/shareArticle', tokenControl, upload.none(), async (req, res) => {
+router.post("/shareArticle", tokenControl, upload.none(), async (req, res) => {
   try {
     console.log("XXXXXXXXXXXXX3");
 
@@ -119,12 +117,12 @@ router.post('/shareArticle', tokenControl, upload.none(), async (req, res) => {
 
     const article = new Article({ content, authorId });
     await article.save();
-    
-    res.status(200).json({ message: 'Makale başarıyla paylaşıldı.' });
+
+    res.status(200).json({ message: "Makale başarıyla paylaşıldı." });
 
     const user = await User.findByPk(authorId);
 
-    logService.createLog(user.username, "Kullanıcı yeni makale paylaştı.")
+    logService.createLog(user.username, "Kullanıcı yeni makale paylaştı.");
   } catch (error) {
     console.log("ARTICLES/error : ", error.message);
 
@@ -132,191 +130,226 @@ router.post('/shareArticle', tokenControl, upload.none(), async (req, res) => {
   }
 });
 
-router.put('/updateArticle/:id', tokenControl, upload.none(), async (req, res) => {
-  try {
-    console.log("XXXXXXXXXXXXX4");
+router.put(
+  "/updateArticle/:id",
+  tokenControl,
+  upload.none(),
+  async (req, res) => {
+    try {
+      console.log("XXXXXXXXXXXXX4");
 
-    const articleId = req.params.id;
-    const userId = req._userId 
-    const { content } = req.body; // Kullanıcının kimliğini talep gövdesinden alın
+      const articleId = req.params.id;
+      const userId = req._userId;
+      const { content } = req.body; // Kullanıcının kimliğini talep gövdesinden alın
 
-    // Makaleyi bulun
-    const article = await Article.findByPk(articleId);
+      // Makaleyi bulun
+      const article = await Article.findByPk(articleId);
 
-    if (!article) {
-      return res.status(404).json({ message: 'Makale bulunamadı.' });
+      if (!article) {
+        return res.status(404).json({ message: "Makale bulunamadı." });
+      }
+
+      // Makaleyi güncellemeye çalışmadan önce, kullanıcının makalenin sahibi olduğunu kontrol edin
+      if (article.authorId != userId) {
+        return res
+          .status(403)
+          .json({ message: "Bu makaleyi güncellemeye yetkiniz yok." });
+      }
+
+      // Eğer kullanıcı makalenin sahibiyse, makaleyi güncelleyin
+      await Article.update({ content }, { where: { id: articleId } });
+
+      // Güncellenmiş makaleyi almak için bir kez daha sorgulama yapın
+      const updatedArticle = await Article.findByPk(articleId);
+
+      res.status(200).json({ message: "Makale güncellendi.", updatedArticle });
+
+      const user = await User.findByPk(authorId);
+
+      logService.createLog(user.username, "Kullanıcı makalesini güncelledi.");
+    } catch (error) {
+      console.log("ARTICLES/error : ", error.message);
+
+      res.status(500).json({ error: error.message });
     }
-
-    // Makaleyi güncellemeye çalışmadan önce, kullanıcının makalenin sahibi olduğunu kontrol edin
-    if (article.authorId != userId) {
-      return res.status(403).json({ message: 'Bu makaleyi güncellemeye yetkiniz yok.' });
-    }
-
-    // Eğer kullanıcı makalenin sahibiyse, makaleyi güncelleyin
-    await Article.update({ content }, { where: { id: articleId } });
-
-    // Güncellenmiş makaleyi almak için bir kez daha sorgulama yapın
-    const updatedArticle = await Article.findByPk(articleId);
-
-    res.status(200).json({ message: 'Makale güncellendi.', updatedArticle });
-
-    const user = await User.findByPk(authorId);
-
-    logService.createLog(user.username, "Kullanıcı makalesini güncelledi.")
-  } catch (error) {
-    console.log("ARTICLES/error : ", error.message);
-
-    res.status(500).json({ error: error.message });
   }
-});
-
+);
 
 // Makale silme
-router.delete('/deleteArticle/:id', tokenControl, upload.none(), async (req, res) => {
-  try {
-    console.log("XXXXXXXXXXXXX5");
+router.delete(
+  "/deleteArticle/:id",
+  tokenControl,
+  upload.none(),
+  async (req, res) => {
+    try {
+      console.log("XXXXXXXXXXXXX5");
 
-    const articleId = req.params.id;
-    const userId = req._userId; // Kullanıcının kimliğini talep gövdesinden alın
+      const articleId = req.params.id;
+      const userId = req._userId; // Kullanıcının kimliğini talep gövdesinden alın
 
-    // Makaleyi bulun
-    const article = await Article.findByPk(articleId);
+      // Makaleyi bulun
+      const article = await Article.findByPk(articleId);
 
-    if (!article) {
-      return res.status(404).json({ message: 'Makale bulunamadı.' });
-    }
-
-    // Makaleyi silmeden önce, kullanıcının makalenin sahibi olduğunu kontrol edin
-    if (article.authorId != userId) {
-      return res.status(403).json({ message: 'Bu makaleyi silmeye yetkiniz yok.' });
-    }
-
-    // Eğer kullanıcı makalenin sahibiyse, makaleyi silin
-    await Article.destroy({
-      where: { id: articleId },
-    });
-
-    res.status(200).end();
-
-    const user = await User.findByPk(article.authorId);
-
-    logService.createLog(user.username, "Kullanıcı makalesini sildi.")
-  } catch (error) {
-    console.log("ARTICLES/error : ", error.message);
-
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.post('/likeArticle/:id', tokenControl, upload.none(), async (req, res) => {
-  try {
-    console.log("XXXXXXXXXXXXX6");
-
-    const articleId = req.params.id;
-    const userId = req._userId;
-
-    // Makalenin yazarını al
-    const article = await Article.findByPk(articleId);
-    if (!article) {
-      return res.status(404).json({ message: 'Makale bulunamadı.' });
-    }
-
-    console.log("AUTHOR ID : ", article.authorId, " - Type : ", typeof(article.authorId));
-    console.log("USER ID : ", userId, " - Type : ", typeof(userId));
-
-
-    // Kullanıcının kendi makalesini beğenmeye çalışmasını engelle
-    if (article.authorId == userId) {
-      return res.status(400).json({ message: 'Kendi makalenizi beğenemezsiniz.' });
-    }
-
-    const user = await User.findByPk(userId);
-    const author = await User.findByPk(article.authorId);
-
-    if (!user) {
-      return res.status(404).json({ message: 'Kullanıcı bulunamadı.' });
-    }
-
-    // Makalenin puanını artır
-    await article.increment('point', { by: 1 });
-
-    const likedShares = await LikedShares.create({
-      userId,
-      articleId
-    });
-
-    if (likedShares) {
-      const notification = await Notification.create({
-        message: `${user.username} ${author.username} kullanıcısının makalesini beğendi.`,
-        userId: author.id,
-        time: new Date(),
-      });
-  
-      io.to(author.id).emit('new_notification', { notification });
-
-      res.status(200).json({ message: 'Makale beğenildi.' });
-
-      logService.createLog(user.username, "Kullanıcı " + articleId + " id li makaleyi beğendi.")
-    } else {
-      res.status(500).json({ message: 'Makale beğenirken bir hata oluştu.' });
-    }
-  } catch (error) {
-    console.log("ARTICLES/error : ", error.message);
-
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.post('/unlikeArticle/:id', tokenControl, upload.none(), async (req, res) => {
-  try {
-    console.log("XXXXXXXXXXXXX6");
-
-    const articleId = req.params.id;
-    const userId = req._userId;
-
-    console.log("ARTICLES/articleId : ", articleId);
-    console.log("ARTICLES/userId : ", userId);
-
-    // İlgili "LikedShares" kaydını bul ve sil
-    const likedShares = await LikedShares.findOne({
-      where: {
-        userId,
-        articleId
+      if (!article) {
+        return res.status(404).json({ message: "Makale bulunamadı." });
       }
-    });
 
-    if (!likedShares) {
-      return res.status(404).json({ message: 'Beğeni bulunamadı.' });
+      // Makaleyi silmeden önce, kullanıcının makalenin sahibi olduğunu kontrol edin
+      if (article.authorId != userId) {
+        return res
+          .status(403)
+          .json({ message: "Bu makaleyi silmeye yetkiniz yok." });
+      }
+
+      // Eğer kullanıcı makalenin sahibiyse, makaleyi silin
+      await Article.destroy({
+        where: { id: articleId },
+      });
+
+      res.status(200).end();
+
+      const user = await User.findByPk(article.authorId);
+
+      logService.createLog(user.username, "Kullanıcı makalesini sildi.");
+    } catch (error) {
+      console.log("ARTICLES/error : ", error.message);
+
+      res.status(500).json({ error: error.message });
     }
-
-    await likedShares.destroy();
-
-    res.status(200).json({ message: 'Makale beğenisi kaldırıldı.' });
-
-    const user = await User.findByPk(userId);
-
-    logService.createLog(user.username, "Kullanıcı " + articleId + " id li makaledeki beğenisini kaldırdı.")
-  } catch (error) {
-    console.log("ARTICLES/error : ", error.message);
-
-    res.status(500).json({ error: error.message });
   }
-});
+);
+
+router.post(
+  "/likeArticle/:id",
+  tokenControl,
+  upload.none(),
+  async (req, res) => {
+    try {
+      console.log("XXXXXXXXXXXXX6");
+
+      const articleId = req.params.id;
+      const userId = req._userId;
+
+      // Makalenin yazarını al
+      const article = await Article.findByPk(articleId);
+      if (!article) {
+        return res.status(404).json({ message: "Makale bulunamadı." });
+      }
+
+      console.log(
+        "AUTHOR ID : ",
+        article.authorId,
+        " - Type : ",
+        typeof article.authorId
+      );
+      console.log("USER ID : ", userId, " - Type : ", typeof userId);
+
+      // Kullanıcının kendi makalesini beğenmeye çalışmasını engelle
+      if (article.authorId == userId) {
+        return res
+          .status(400)
+          .json({ message: "Kendi makalenizi beğenemezsiniz." });
+      }
+
+      const user = await User.findByPk(userId);
+      const author = await User.findByPk(article.authorId);
+
+      if (!user) {
+        return res.status(404).json({ message: "Kullanıcı bulunamadı." });
+      }
+
+      // Makalenin puanını artır
+      await article.increment("point", { by: 1 });
+
+      const likedShares = await LikedShares.create({
+        userId,
+        articleId,
+      });
+
+      if (likedShares) {
+        const notification = await Notification.create({
+          message: `${user.username} ${author.username} kullanıcısının makalesini beğendi.`,
+          userId: author.id,
+          time: new Date(),
+        });
+
+        io.to(author.id).emit("new_notification", { notification });
+
+        res.status(200).json({ message: "Makale beğenildi." });
+
+        logService.createLog(
+          user.username,
+          "Kullanıcı " + articleId + " id li makaleyi beğendi."
+        );
+      } else {
+        res.status(500).json({ message: "Makale beğenirken bir hata oluştu." });
+      }
+    } catch (error) {
+      console.log("ARTICLES/error : ", error.message);
+
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+router.post(
+  "/unlikeArticle/:id",
+  tokenControl,
+  upload.none(),
+  async (req, res) => {
+    try {
+      console.log("XXXXXXXXXXXXX6");
+
+      const articleId = req.params.id;
+      const userId = req._userId;
+
+      console.log("ARTICLES/articleId : ", articleId);
+      console.log("ARTICLES/userId : ", userId);
+
+      // İlgili "LikedShares" kaydını bul ve sil
+      const likedShares = await LikedShares.findOne({
+        where: {
+          userId,
+          articleId,
+        },
+      });
+
+      if (!likedShares) {
+        return res.status(404).json({ message: "Beğeni bulunamadı." });
+      }
+
+      await likedShares.destroy();
+
+      res.status(200).json({ message: "Makale beğenisi kaldırıldı." });
+
+      const user = await User.findByPk(userId);
+
+      logService.createLog(
+        user.username,
+        "Kullanıcı " + articleId + " id li makaledeki beğenisini kaldırdı."
+      );
+    } catch (error) {
+      console.log("ARTICLES/error : ", error.message);
+
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
 
 // Makaleyi beğenen kullanıcılar
-router.get('/likedUsers/:id', upload.none(), async (req, res) => {
+router.get("/likedUsers/:id", upload.none(), async (req, res) => {
   try {
     console.log("XXXXXXXXXXXXX7");
 
     const articleId = req.params.id;
-    
+
     // Article modeline ekstra ilişki eklenmesi gerekebilir.
     const article = await Article.findByPk(articleId, {
-      include: [{ model: User, as: 'likedUsers' }],
+      include: [{ model: User, as: "likedUsers" }],
     });
 
     if (!article) {
-      return res.status(404).json({ message: 'Makale bulunamadı.' });
+      return res.status(404).json({ message: "Makale bulunamadı." });
     }
 
     const likedUsers = article.likedUsers;
@@ -325,6 +358,5 @@ router.get('/likedUsers/:id', upload.none(), async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 module.exports = router;

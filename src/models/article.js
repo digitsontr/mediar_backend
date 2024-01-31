@@ -1,9 +1,8 @@
 // Article.js (MySQL)
-const { DataTypes } = require('sequelize');
-const sequelize = require('../db'); // Sequelize bağlantınızı burada tanımlayın
+const { DataTypes } = require("sequelize");
+const sequelize = require("../db"); // Sequelize bağlantınızı burada tanımlayın
 
-
-const Article = sequelize.define('Article', {
+const Article = sequelize.define("Article", {
   content: {
     type: DataTypes.STRING,
     allowNull: false,

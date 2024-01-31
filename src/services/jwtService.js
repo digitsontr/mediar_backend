@@ -1,9 +1,8 @@
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 
 module.exports = {
-  
   // JWT oluşturma
-  generateToken(payload, expiresIn = '1h') {
+  generateToken(payload, expiresIn = "1h") {
     return jwt.sign(payload, "mediar_security_key", { expiresIn });
   },
 
@@ -22,7 +21,7 @@ module.exports = {
 
   tokenControl(req, res, next) {
     try {
-      var token = req.header('Authorization') || req.body.headers.Authorization;
+      var token = req.header("Authorization") || req.body.headers.Authorization;
 
       console.log("req :: ", req.body.headers);
       console.log("token :: ", token);
@@ -30,7 +29,7 @@ module.exports = {
       if (token && token.startsWith("Bearer ")) {
         token = token.substring(7, token.length);
       } else {
-        return res.status(401).json({ error: 'Unauthorized' });
+        return res.status(401).json({ error: "Unauthorized" });
       }
 
       console.log("/token1 : ", token);
@@ -46,11 +45,11 @@ module.exports = {
         next(); // Call next to proceed to the route handler
       } else {
         //console.log("BBBBBBBBBB");
-        res.status(403).json({ "error": "Invalid token" });
+        res.status(403).json({ error: "Invalid token" });
       }
     } catch (error) {
       console.log("ERROR: ", error);
-      res.status(403).json({ "error": "Unauthorized request" });
+      res.status(403).json({ error: "Unauthorized request" });
     }
-  }
-}
+  },
+};

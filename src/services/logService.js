@@ -1,5 +1,5 @@
 // logService.js
-const Log = require('../models/log');
+const Log = require("../models/log");
 
 async function createLog(username, process) {
   try {
@@ -8,7 +8,7 @@ async function createLog(username, process) {
       process: process,
     });
   } catch (error) {
-    console.error('Log mesajı kaydedilirken hata oluştu:', error);
+    console.error("Log mesajı kaydedilirken hata oluştu:", error);
   }
 }
 
