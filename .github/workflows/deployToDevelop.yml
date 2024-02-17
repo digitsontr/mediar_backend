@@ -39,6 +39,8 @@ jobs:
         mv deployToDevelop-.git deployToDevelop/.git
         cd deployToDevelop
         pwd
+        cd ..
+        ls -a
         cp -R ../deployToDevelop .
         git add .
         git diff --staged --quiet || git commit -m "Update Artifacts"
