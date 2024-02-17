@@ -11,10 +11,38 @@ jobs:
 
     steps:
     - name: Checkout repository
+      uses: webfactory/ssh-agent@v0.5.1
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+        
+    - name: Setup Git Client
+      run: |
+        ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+        git config --global user.email "admin@digitson.com.tr"
+        git config --global user.name "digitsontr"
+
+    - name: Checkout repository
       uses: actions/checkout@v2
 
     - name: Install dependencies
       run: npm install
 
     - name: Run build
-      run: npm run build
+      run: npm run build:release
+
+    - name: Dist to develop branch  
+      run: |
+        git clone --depth 1 --single-branch -b deployToDevelop git@github.com:${{ github.repository }}.git deployToDevelop
+        mv deployToDevelop/.git deployToDevelop-.git
+        rm -rf deployToDevelop
+        mkdir deployToDevelop
+        mv deployToDevelop-.git deployToDevelop/.git
+        cd deployToDevelop
+        cp -R ../dist .
+        git add .
+        git diff --staged --quiet || git commit -m "Update Artifacts"
+
+
+
+    
+
