@@ -39,7 +39,7 @@ jobs:
         mv deployToDevelop-.git deployToDevelop/.git
         cd deployToDevelop
         pwd
-        mv -v !(deployToDevelop|.git) deployToDevelop/
+        find . -mindepth 1 -maxdepth 1 -not \( -name 'deployToDevelop' -o -name '.git' \) -exec mv -v {} deployToDevelop/ \;
         git add .
         git diff --staged --quiet || git commit -m "Update Artifacts"
         git push
