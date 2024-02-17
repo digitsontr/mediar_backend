@@ -325,6 +325,12 @@ router.get("/users", tokenControl, upload.none(), async (req, res) => {
   }
 });
 
+
+router.get("/test", upload.none(), async (req, res)  =>  {
+  console.log("S2S2S2S2S2S2S2S2");
+  res.status(200).send("Hello world")
+});
+
 router.get("/:id", tokenControl, upload.none(), async (req, res) => {
   try {
     const userForMe = await User.findByPk(req._userId, {

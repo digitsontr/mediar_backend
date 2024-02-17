@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src",
+    "test": "jest ./app.test.js"
   },
   "keywords": [],
   "author": "",
@@ -25,5 +26,9 @@
     "passport-google-oauth2": "^0.2.0",
     "sequelize": "^6.33.0",
     "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.23.9",
+    "@babel/preset-env": "^7.23.9"
   }
 }
