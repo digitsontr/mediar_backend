@@ -1,6 +1,6 @@
-import localConfig from "./config"
-import releaseConfig from "./config.release"
-import developConfig from "./config.develop"
+const localConfig = require("./config");
+const releaseConfig = require( "./config.release");
+const developConfig = require("./config.develop");
 
 let config;
 
