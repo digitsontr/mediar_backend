@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node src",
     "test": "jest ./app.test.js",
-    "build": "babel src -d dist"
+    "build": "babel src -d dist",
+    "build:develop": "NODE_ENV=develop babel src -d dist",
+    "build:release": "NODE_ENV=release babel src -d dist"
   },
   "keywords": [],
   "author": "",

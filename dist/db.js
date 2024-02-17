@@ -1,10 +1,11 @@
 const {
   Sequelize
 } = require("sequelize");
-const sequelize = new Sequelize("mediar", "root", "passw0rd", {
-  host: "localhost",
-  dialect: "mysql",
-  port: 3306
+import config from "../configLoader";
+const sequelize = new Sequelize(config.dbConnection.dbName, config.dbConnection.username, config.dbConnection.password, {
+  host: config.dbConnection.host,
+  dialect: config.dbConnection.dialect,
+  port: config.dbConnection.port
 });
 sequelize.authenticate().then(() => {
   console.log("\n ----- Veritabanı bağlantısı başarılı. -----");
