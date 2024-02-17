@@ -38,7 +38,7 @@ jobs:
         mkdir deployToDevelop
         mv deployToDevelop-.git deployToDevelop/.git
         cd deployToDevelop
-        find .. -mindepth 1 -maxdepth 1 -exec cp -R {} . \;
+        rsync -av --exclude='.git' ../deployToDevelop/ ./
         git add .
         git diff --staged --quiet || git commit -m "Update Artifacts"
         git push
