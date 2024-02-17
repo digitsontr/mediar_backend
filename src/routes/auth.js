@@ -4,7 +4,7 @@ const multer = require("multer");
 const { generateToken, tokenControl } = require("../services/jwtService");
 
 const passport = require("passport");
-const session = require("express-session");
+//const session = require("express-session");
 
 const router = express.Router();
 const bcrypt = require("bcrypt");
@@ -12,6 +12,7 @@ const upload = multer();
 const logService = require("../services/logService");
 
 const User = require("../models/user");
+const Follow = require("../models/follow");
 const Article = require("../models/article");
 const Notification = require("../models/notification");
 
@@ -205,10 +206,30 @@ router.get("/followers/", tokenControl, upload.none(), async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
+    
+    // o seni takip ediyor, aynı zamanda sen de onu takip ediyor musun?
+    const followersWithFollowBack = await Promise.all(
+      user.Followers.map(async (follower) => {
+        const isFollowing = await Follow.findOne({
+          where: {
+            followerId: userId,
+            followingId: follower.id
+          }
+        });
+    
+        //console.log("xxxxx : ", follower.id, " - ", userId, " - ", !!isFollowingBack); // Bu satırı ekleyin
+    
+        return {
+          ...follower.get(),
+          isFollowing: !!isFollowing
+        };
+      })
+    );
+      
+    res.status(200).json({ followers: followersWithFollowBack });
 
-    const followers = user.Followers; // Kullanıcının takipçileri "Followers" ilişkisi aracılığıyla alınır
-
-    res.status(200).json({ followers });
+    //const followers = user.Followers; // Kullanıcının takipçileri "Followers" ilişkisi aracılığıyla alınır
+    //res.status(200).json({ followers });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -234,10 +255,18 @@ router.get("/followings/", tokenControl, upload.none(), async (req, res) => {
       return res.status(404).json({ message: "Kullanıcı bulunamadı." });
     }
 
-    const following = user.Following; // Kullanıcının takip ettikleri "Following" ilişkisi aracılığıyla alınır
+    //console.log("\n\n\nFOLLOWINGS FOR PROFILE: ", user.Following);
 
-    res.status(200).json({ following });
+    const followings = user.Following.map((followedUser) => ({
+      ...followedUser.toJSON(),
+      isFollowing: true,
+    }));
+
+    //console.log("\n\n\ resultFollowings FOR PROFILE: ", resultFollowings);
+
+    res.status(200).json({ followings });
   } catch (error) {
+    console.log("ERROR ON FOLLOWINGS : ", error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -298,18 +327,15 @@ router.get("/users", tokenControl, upload.none(), async (req, res) => {
 
 router.get("/:id", tokenControl, upload.none(), async (req, res) => {
   try {
-    const userId = req.params.id;
-
-    const user = await User.findByPk(userId, {
+    const userForMe = await User.findByPk(req._userId, {
       attributes: { exclude: ["password", "isAdmin"] },
-
       include: [
         {
           model: User,
           as: "Followers",
           through: "Follow",
           attributes: {
-            exclude: ["password", "isAdmin"], // Exclude the password field
+            exclude: ["password", "isAdmin"],
           },
         },
         {
@@ -317,22 +343,89 @@ router.get("/:id", tokenControl, upload.none(), async (req, res) => {
           as: "Following",
           through: "Follow",
           attributes: {
-            exclude: ["password", "isAdmin"], // Exclude the password field
+            exclude: ["password", "isAdmin"],
           },
         },
         {
           model: Article,
-          as: "LikedArticles",
-          through: "LikedShares",
+          as: "articles",
+          include: [
+            {
+              model: User,
+              as: "likedUsers",
+              attributes: ["id", "username"],
+              through: {
+                attributes: [],
+              },
+            },
+          ],
         },
-        "articles",
       ],
     });
 
+    const userId = req.params.id;
+
+    const user = await User.findByPk(userId, {
+      attributes: { exclude: ["password", "isAdmin"] },
+      include: [
+        {
+          model: User,
+          as: "Followers",
+          through: "Follow",
+          attributes: {
+            exclude: ["password", "isAdmin"],
+          },
+        },
+        {
+          model: User,
+          as: "Following",
+          through: "Follow",
+          attributes: {
+            exclude: ["password", "isAdmin"],
+          },
+        },
+        {
+          model: Article,
+          as: "articles",
+          include: [
+            {
+              model: User,
+              as: "likedUsers",
+              attributes: ["id", "username"],
+              through: {
+                attributes: [],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    
     if (!user) {
       return res.status(404).json({ message: "Kullanıcı bulunamadı." });
-    }
+    }    
 
+    const isFollowing = user.Followers.some((follower) => follower.id === req._userId);
+    user.setDataValue("isFollowing", isFollowing);
+
+    const followings = user.Following.map((followedUser) => {
+      const isFollowing = userForMe.Followers.some((follower) => follower.id === followedUser.id);
+      followedUser.setDataValue("isFollowing", isFollowing);
+      return followedUser;
+    });
+    
+    const followers = user.Followers.map((follower) => {
+      const isFollowing = userForMe.Following.some((followedUser) => followedUser.id === follower.id);
+      follower.setDataValue("isFollowing", isFollowing);
+      return follower;
+    });
+    
+    user.setDataValue("Following", followings);
+    user.setDataValue("Followers", followers);
+
+    //console.log("\n\n user.Followers :: ", followers);
+
+  
     res.status(200).json(user);
   } catch (error) {
     console.log("AUTH/error : ", error.message);
@@ -447,15 +540,17 @@ router.get(
     try {
       const userId = req._userId;
 
-      const user = await User.findByPk(userId, {
+      const userLikedsArticles = await User.findByPk(userId, {
         include: [{ model: Article, as: "likedArticles" }],
       });
 
-      if (!user) {
-        return res.status(404).json({ message: "Kullanıcı bulunamadı." });
+      if (!userLikedsArticles) {
+        return res.status(404).json({ message: "Beğenilen makale bulunamadı." });
       }
 
-      const likedArticles = user.likedArticles;
+      console.log("OOOOOOOOOOOOO");
+
+      const likedArticles = userLikedsArticles.likedArticles || [];
 
       res.status(200).json({ likedArticles });
     } catch (error) {

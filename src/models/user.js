@@ -1,5 +1,5 @@
 const { DataTypes } = require("sequelize");
-const sequelize = require("../db"); // Sequelize bağlantınızı burada tanımlayın
+const sequelize = require("../db"); 
 
 const Article = require("./article");
 
@@ -16,7 +16,7 @@ const User = sequelize.define("User", {
   email: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true, // E-postaların benzersiz olmasını sağlar
+    unique: true, 
   },
   password: {
     type: DataTypes.STRING,
@@ -32,11 +32,11 @@ const User = sequelize.define("User", {
   },
   isAdmin: {
     type: DataTypes.BOOLEAN,
-    defaultValue: false, // Varsayılan değeri false
+    defaultValue: false, 
   },
   isActive: {
     type: DataTypes.BOOLEAN,
-    defaultValue: true, // Varsayılan değeri true
+    defaultValue: true, 
   },
 });
 
@@ -53,8 +53,9 @@ User.belongsToMany(User, {
 });
 User.belongsToMany(Article, {
   through: "LikedShares",
-  as: "LikedArticles", // Burada "LikedArticles" bir takma ad (alias) olarak kullanılıyor
+  as: "LikedArticles",
   foreignKey: "userId",
 });
+
 
 module.exports = User;

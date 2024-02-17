@@ -21,4 +21,9 @@ const Article = sequelize.define("Article", {
   },
 });
 
+Article.associate = (models) => {
+  Article.belongsToMany(models.User, { through: 'LikedShares', as: 'likedUsers' });
+  Article.belongsTo(models.User, { foreignKey: 'authorId', as: 'author' });
+};
+
 module.exports = Article;
