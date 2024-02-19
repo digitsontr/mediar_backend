@@ -1,5 +1,5 @@
 const localConfig = require("./config");
-const releaseConfig = require( "./config.release");
+const releaseConfig = require("./config.release");
 const developConfig = require("./config.develop");
 
 let config;
@@ -7,20 +7,15 @@ let config;
 switch (process.env.NODE_ENV) {
     case "local":
         config = localConfig;
-
         break;
     case "release":
         config = releaseConfig;
-
         break;
     case "develop":
         config = developConfig;
-
         break;
-
     default:
         config = localConfig;
 }
 
-export default config;
-
+module.exports = config;

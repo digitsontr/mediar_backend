@@ -80,6 +80,6 @@ app.use("/articles", articlesRoutes);
 // -----------------------------------------
 // Start Server..
 server.listen(3000, () => {
-  console.log("\n ----- Server started on port 3000 -----");
+  console.log("\n ----- Server started on port 3000 -----\n");
 });
 // -----------------------------------------
