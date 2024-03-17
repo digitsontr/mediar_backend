@@ -25,6 +25,10 @@ var GoogleStrategy = require("passport-google-oauth2").Strategy;
 require("dotenv").config();
 const GOOGLE_CLIENT_ID = process.env["GOOGLE_CLIENT_ID"];
 const GOOGLE_CLIENT_SECRET = process.env["GOOGLE_CLIENT_SECRET"];
+
+//console.log("GOOGLE_CLIENT_ID : ", GOOGLE_CLIENT_ID);
+//console.log("GOOGLE_CLIENT_SECRET : ", GOOGLE_CLIENT_SECRET);
+
 passport.use(new GoogleStrategy({
   clientID: GOOGLE_CLIENT_ID,
   clientSecret: GOOGLE_CLIENT_SECRET,
@@ -52,7 +56,8 @@ router.get("/notifications", tokenControl, upload.none(), async (req, res) => {
 
     res.status(200).json(notifications);
   } catch (error) {
-    console.log("AUTH/NOTIFICATIONS/error : ", error.message);
+    //console.log("AUTH/NOTIFICATIONS/error : ", error.message);
+
     res.status(500).json({
       error: error.message
     });
@@ -93,15 +98,18 @@ router.get("/google/callback", passport.authenticate("google", {
       email: user.email,
       image: googleUser.picture
     };
+
+    //console.log("PAYLOAD : ", payload);
+
     const token = generateToken(payload);
 
     // Token ile yanıt dön
-    res.redirect(`http://localhost:3001/google_login_success?token=${token}&userData=${JSON.stringify(payload)}`);
+    res.redirect(`http://localhost:3002/google_login_success?token=${token}&userData=${JSON.stringify(payload)}`);
     logService.createLog(user.username, user.username + " Giriş yaptı.");
 
     //res.status(200).json({ message: 'Giriş başarılı.', token: token, user: user });
   } catch (error) {
-    console.error("Google callback error:", error);
+    //console.error("Google callback error:", error);
     res.status(500).json({
       error: error.message
     });
@@ -118,7 +126,7 @@ router.post("/login", upload.none(), async (req, res) => {
       username,
       password
     } = req.body;
-    console.log("username : ", username, " \n password : ", password);
+    //console.log("username : ", username, " \n password : ", password);
     const user = await User.findOne({
       where: {
         username: username
@@ -129,14 +137,20 @@ router.post("/login", upload.none(), async (req, res) => {
         message: "Kullanıcı bulunamadı."
       });
     }
+
+    //console.log("PASSMATCH FOR LOGIN : ", password, user.password);
+
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (passwordMatch) {
+      //console.log("PASSMATCH FOR LOGIN2 : ", passwordMatch);
+
       const payload = {
         id: user.id,
         username: user.username
       };
       const token = generateToken(payload);
-      console.log("TOKEN : " + token);
+
+      //console.log("TOKEN : " + token);
       res.status(200).json({
         message: "Giriş başarılı.",
         token: token,
@@ -144,12 +158,16 @@ router.post("/login", upload.none(), async (req, res) => {
       });
       logService.createLog(username, "Giriş yaptı.");
     } else {
+      //console.log("PASSMATCH FOR LOGIN3 : ", passwordMatch);
+
       res.status(401).json({
         message: "Kullanıcı adı veya şifre hatalı."
       });
       logService.createLog(username, "Başarısız giriş.");
     }
   } catch (error) {
+    //console.log("ERROR FOR LOGIN : ", error.message);
+
     res.status(500).json({
       error: error.message
     });
@@ -163,12 +181,18 @@ router.post("/register", upload.none(), async (req, res) => {
       email,
       password
     } = req.body;
+
+    /*
     console.log("AUTH/username : ", username);
     console.log("AUTH/name : ", name);
     console.log("AUTH/email : ", email);
     console.log("AUTH/password : ", password);
+    */
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    console.log("AUTH/hashedPassword : ", hashedPassword);
+
+    //console.log("AUTH/hashedPassword : ", hashedPassword);
+
     const user = new User({
       username,
       name,
@@ -181,7 +205,7 @@ router.post("/register", upload.none(), async (req, res) => {
     });
     logService.createLog(username, "Kullanıcı başarıyla kaydedildi.");
   } catch (error) {
-    console.log("AUTH/ERROR : ", error.message);
+    //console.log("AUTH/ERROR2 : ", error.message);
     res.status(500).json({
       error: error.message
     });
@@ -266,7 +290,7 @@ router.get("/followings/", tokenControl, upload.none(), async (req, res) => {
       followings
     });
   } catch (error) {
-    console.log("ERROR ON FOLLOWINGS : ", error.message);
+    //console.log("ERROR3 ON FOLLOWINGS : ", error.message);
     res.status(500).json({
       error: error.message
     });
@@ -315,14 +339,15 @@ router.get("/users", tokenControl, upload.none(), async (req, res) => {
     });
     res.status(200).json(users);
   } catch (error) {
-    console.log("AUTH/error : ", error.message);
+    //console.log("AUTH/error : ", error.message);
+
     res.status(500).json({
       error: error.message
     });
   }
 });
 router.get("/test", upload.none(), async (req, res) => {
-  console.log("S2S2S2S2S2S2S2S2");
+  //console.log("S2S2S2S2S2S2S2S2");
   res.status(200).send("Hello world");
 });
 router.get("/:id", tokenControl, upload.none(), async (req, res) => {
@@ -414,7 +439,7 @@ router.get("/:id", tokenControl, upload.none(), async (req, res) => {
 
     res.status(200).json(user);
   } catch (error) {
-    console.log("AUTH/error : ", error.message);
+    //console.log("AUTH/error : ", error.message);
     res.status(500).json({
       error: error.message
     });
@@ -473,7 +498,8 @@ router.put("/updateUser", tokenControl, upload.none(), async (req, res) => {
     });
     logService.createLog(updatedUser.username, "Kullanıcı bilgileri güncellendi.");
   } catch (error) {
-    console.log("AUTH/ERROR : ", error.message);
+    //console.log("AUTH/ERROR4 : ", error.message);
+
     res.status(500).json({
       error: error.message
     });
@@ -510,7 +536,8 @@ router.delete("/deleteUser", tokenControl, upload.none(), async (req, res) => {
     res.status(204).end();
     logService.createLog(username, "Kullanıcı silindi.");
   } catch (error) {
-    console.log("AUTH/ERROR : ", error.message);
+    //console.log("AUTH/ERROR5 : ", error.message);
+
     res.status(500).json({
       error: error.message
     });
@@ -530,7 +557,9 @@ router.get("/likedArticles/:id", tokenControl, upload.none(), async (req, res) =
         message: "Beğenilen makale bulunamadı."
       });
     }
-    console.log("OOOOOOOOOOOOO");
+
+    //console.log("OOOOOOOOOOOOO");
+
     const likedArticles = userLikedsArticles.likedArticles || [];
     res.status(200).json({
       likedArticles
@@ -551,7 +580,8 @@ router.post("/follow/:id", tokenControl, upload.none(), async (req, res) => {
         message: "Kullanıcı kendini takip edemez."
       });
     }
-    console.log("following id : ", followingId);
+
+    //console.log("following id : ", followingId);
     // Takip edilen kullanıcıyı bulun
     const followingUser = await User.findByPk(followingId);
     if (!followingUser) {
@@ -578,25 +608,18 @@ router.post("/follow/:id", tokenControl, upload.none(), async (req, res) => {
 
     // Takip et
     await followingUser.addFollower(followerUser);
-    const followerData = {
-      id: followerUser.id,
-      username: followerUser.username,
-      image: followerUser.image,
-      email: followerUser.email,
-      name: followerUser.name
-    };
     const notification = await Notification.create({
-      message: `${followerUser.username} ${followingUser.username} kullanıcısını takip etti.`,
+      message: `${followerUser.username} follows ${followingUser.username}`,
       userId: followingUser.id,
       time: new Date()
     });
-    io.to(followingId).emit("new_notification", {
+    io.to(followingId.toString()).emit("new_notification", {
       notification
     });
     res.status(200).json({
       message: "Kullanıcıyı başarıyla takip ettiniz."
     });
-    logService.createLog(followerUser.username, followerUser.username + " kullanıcısı" + followingUser.username + " kullanıcısı takip etti.");
+    logService.createLog(followerUser.username, followerUser.username + " follows " + followingUser.username);
   } catch (error) {
     res.status(500).json({
       error: error.message
@@ -641,14 +664,14 @@ router.post("/unfollow/:id", tokenControl, upload.none(), async (req, res) => {
     // Takibi bırak
     await followingUser.removeFollower(followerUser);
     await Notification.create({
-      message: `${followerUser.username} ${followingUser.username} kullanıcısını takipten çıktı.`,
+      message: `${followerUser.username} unfollows ${followingUser.username}`,
       userId: followingUser.id,
       time: new Date()
     });
     res.status(200).json({
       message: "Kullanıcının takibini bıraktınız."
     });
-    logService.createLog(followerUser.username, followingUser.username + " kullanıcısını takipten çıkardı.");
+    logService.createLog(followerUser.username, " unfollows " + followingUser.username);
   } catch (error) {
     res.status(500).json({
       error: error.message
@@ -657,12 +680,13 @@ router.post("/unfollow/:id", tokenControl, upload.none(), async (req, res) => {
 });
 router.get("/google/failure", upload.none(), async (req, res) => {
   try {
-    console.log("AUTH/FAILURE : Google auth - başarısız.", req);
+    //.log("AUTH/FAILURE : Google auth - başarısız.", req);
+
     res.status(200).json({
       message: "Google auth - başarısız."
     });
   } catch (error) {
-    console.log("AUTH/ERROR : ", error.message);
+    //console.log("AUTH/ERROR6 : ", error.message);
     res.status(500).json({
       error: error.message
     });

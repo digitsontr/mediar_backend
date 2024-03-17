@@ -58,7 +58,7 @@ router.get("/myfollowings", tokenControl, upload.none(), async (req, res) => {
     const articlesWithAuthor = await Promise.all(articles.map(async article => {
       // Her makalenin yazarını bul
       const author = await User.findByPk(article.authorId, {
-        attributes: ['username', 'image'] // Yazarın kullanıcı adı ve resmini al
+        attributes: ["username", "image"] // Yazarın kullanıcı adı ve resmini al
       });
       return {
         ...article.get({
@@ -69,10 +69,12 @@ router.get("/myfollowings", tokenControl, upload.none(), async (req, res) => {
         authorImage: author.image // Yazarın kullanıcı adını ekle
       };
     }));
-    console.log("ARTICLES : ", articlesWithAuthor);
+
+    //console.log("ARTICLES : ", articlesWithAuthor);
+
     res.status(200).json(articlesWithAuthor);
   } catch (error) {
-    console.log("Error on /myfollows endpoint: ", error.message);
+    //console.log("Error on /myfollows endpoint: ", error.message);
     res.status(500).json({
       error: error.message
     });
@@ -121,7 +123,7 @@ router.get("/mynonfollowings", tokenControl, upload.none(), async (req, res) => 
     const articlesWithAuthor = await Promise.all(articles.map(async article => {
       // Her makalenin yazarını bul
       const author = await User.findByPk(article.authorId, {
-        attributes: ['username', 'image'] // Yazarın kullanıcı adı ve resmini al
+        attributes: ["username", "image"] // Yazarın kullanıcı adı ve resmini al
       });
       return {
         ...article.get({
@@ -137,7 +139,7 @@ router.get("/mynonfollowings", tokenControl, upload.none(), async (req, res) => 
 
     res.status(200).json(articlesWithAuthor);
   } catch (error) {
-    console.log("Error on /nonfollowings endpoint: ", error.message);
+    //console.log("Error on /nonfollowings endpoint: ", error.message);
     res.status(500).json({
       error: error.message
     });
@@ -233,7 +235,7 @@ router.get("/ofUser/:authorid", tokenControl, upload.none(), async (req, res) =>
     }
     res.status(200).json(articles);
   } catch (error) {
-    console.log("error : ", error.message);
+    //console.log("error : ", error.message);
     res.status(500).json({
       error: error.message
     });
@@ -321,9 +323,10 @@ router.get("/:id", tokenControl, upload.none(), async (req, res) => {
       likedUsers
     });
   } catch (error) {
-    console.log("ARTICLES/error : ", error.message);
+    //console.log("ARTICLES/error : ", error.message);
+
     res.status(400).json({
-      error: "ERROR"
+      error: "ERROR1"
     });
   }
 });
@@ -346,7 +349,8 @@ router.post("/shareArticle", tokenControl, upload.none(), async (req, res) => {
     const user = await User.findByPk(authorId);
     logService.createLog(user.username, "Kullanıcı yeni makale paylaştı.");
   } catch (error) {
-    console.log("ARTICLES/error : ", error.message);
+    //console.log("ARTICLES/error : ", error.message);
+
     res.status(500).json({
       error: error.message
     });
@@ -395,7 +399,8 @@ router.put("/updateArticle/:id", tokenControl, upload.none(), async (req, res) =
     const user = await User.findByPk(authorId);
     logService.createLog(user.username, "Kullanıcı makalesini güncelledi.");
   } catch (error) {
-    console.log("ARTICLES/error : ", error.message);
+    //console.log("ARTICLES/error : ", error.message);
+
     res.status(500).json({
       error: error.message
     });
@@ -435,7 +440,8 @@ router.delete("/deleteArticle/:id", tokenControl, upload.none(), async (req, res
     const user = await User.findByPk(article.authorId);
     logService.createLog(user.username, "Kullanıcı makalesini sildi.");
   } catch (error) {
-    console.log("ARTICLES/error : ", error.message);
+    //console.log("ARTICLES/error : ", error.message);
+
     res.status(500).json({
       error: error.message
     });
@@ -490,11 +496,11 @@ router.post("/likeArticle/:id", tokenControl, upload.none(), async (req, res) =>
     });
     if (likedShares) {
       const notification = await Notification.create({
-        message: `${user.username} ${author.username} kullanıcısının makalesini beğendi.`,
+        message: `${user.username} likes ${author.username}'s post`,
         userId: author.id,
         time: new Date()
       });
-      io.to(author.id).emit("new_notification", {
+      io.to(author.id.toString()).emit("new_notification", {
         notification
       });
       res.status(200).json({
@@ -507,7 +513,8 @@ router.post("/likeArticle/:id", tokenControl, upload.none(), async (req, res) =>
       });
     }
   } catch (error) {
-    console.log("ARTICLES/error : ", error.message);
+    //console.log("ARTICLES/error : ", error.message);
+
     res.status(500).json({
       error: error.message
     });
@@ -542,7 +549,8 @@ router.post("/unlikeArticle/:id", tokenControl, upload.none(), async (req, res) 
     const user = await User.findByPk(userId);
     logService.createLog(user.username, "Kullanıcı " + articleId + " id li makaledeki beğenisini kaldırdı.");
   } catch (error) {
-    console.log("ARTICLES/error : ", error.message);
+    //console.log("ARTICLES/error : ", error.message);
+
     res.status(500).json({
       error: error.message
     });
