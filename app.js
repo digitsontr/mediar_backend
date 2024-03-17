@@ -9,21 +9,29 @@ const http = require("http");
 
 // -----------------------------------------
 // SocketIO Setup..
+const { initSocket, getIO, setIO } = require("./socket");
+
 const server = http.createServer(app);
-const socket = require("./socket");
 
-socket.init(server);
+initSocket(server);
 
-const io = socket.getIO();
+const io = getIO();
 
 io.on("connection", (socket) => {
-  const userId = socket.handshake.query.userId;
+  const userId = (socket.handshake.query || {}).userId || ""; // Initialize userId here
 
-  socket.join(userId);
-  // io.to(userId).emit('Backend: Socket Connected ', { userId }); // test
+  console.log("_SOCKET31 :********* a user connected *********** : ", socket.id, userId);
 
-  console.log("********* a user connected *********** : ", socket.id);
+  if (userId && userId !== "") {
+    socket.join(userId);
+    //io.to(userId.toString()).emit('mediatlon_socket_connected', { userId }); // test
+  
+    console.log("_SOCKET32 :********* a user connected *********** : ", socket.id, userId);
+
+    setIO(io);
+  }
 });
+
 // -----------------------------------------
 
 // -----------------------------------------
@@ -48,7 +56,7 @@ try {
     next();
   });
 } catch (error) {
-  console.log("Middleware setup error : ", error);
+  //console.log("Middleware setup error : ", error);
 }
 // -----------------------------------------
 
@@ -71,15 +79,25 @@ app.use(passport.session());
 // Routes..
 const authRoutes = require("./src/routes/auth");
 const articlesRoutes = require("./src/routes/articles");
+const adminRoutes = require("./src/routes/admin");
 
-app.use(cors());
+const corsOptions = {
+  origin: "*", // İzin verilen kaynakları buraya ekleyin, örn: "http://localhost:3002"
+  methods: "GET, POST, PUT, DELETE",
+};
+
+app.use(cors(corsOptions));
 app.use("/auth", authRoutes);
 app.use("/articles", articlesRoutes);
+app.use("/admin", adminRoutes);
 // -----------------------------------------
 
 // -----------------------------------------
 // Start Server..
 server.listen(3000, () => {
-  console.log("\n ----- Server started on port 3000 -----");
+  console.log("\n ----- Server started on port 3000 -----\n");
 });
 // -----------------------------------------
+
+
+module.exports = { io }

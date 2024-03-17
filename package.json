@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node src",
+    "start": "node app.js",
     "test": "jest ./app.test.js",
     "build": "babel src -d dist",
     "build:develop": "NODE_ENV=develop babel src -d dist",
@@ -14,7 +14,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "@babel/cli": "^7.23.9",
+    "@babel/preset-env": "^7.23.9",
+    "bcrypt": "^5.0.1",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -28,9 +30,7 @@
     "passport": "^0.6.0",
     "passport-google-oauth2": "^0.2.0",
     "sequelize": "^6.33.0",
-    "socket.io": "^4.7.2",
-    "@babel/cli": "^7.23.9",
-    "@babel/preset-env": "^7.23.9"
+    "socket.io": "^4.7.2"
   },
   "devDependencies": {
     "@babel/cli": "^7.23.9",

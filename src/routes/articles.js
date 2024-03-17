@@ -34,7 +34,7 @@ router.get("/myfollowings", tokenControl, upload.none(), async (req, res) => {
     }
 
     // Takip ettiğiniz kullanıcıların id'lerini bir diziye çıkartın
-    const followingIds = user.Following.map(following => following.id);
+    const followingIds = user.Following.map((following) => following.id);
 
     // Bu kullanıcıların makalelerini alın
     const articles = await Article.findAll({
@@ -56,93 +56,102 @@ router.get("/myfollowings", tokenControl, upload.none(), async (req, res) => {
     });
 
     // Makaleleri ve yazar bilgilerini döndür
-    const articlesWithAuthor = await Promise.all(articles.map(async (article) => {
-      // Her makalenin yazarını bul
-      const author = await User.findByPk(article.authorId, {
-        attributes: ['username', 'image'] // Yazarın kullanıcı adı ve resmini al
-      });
-    
-      return {
-        ...article.get({ plain: true }),
-        authorName: author.username, // Yazarın kullanıcı adını ekle
-        authorImage: author.image, // Yazarın kullanıcı adını ekle
-      };
-    }));
+    const articlesWithAuthor = await Promise.all(
+      articles.map(async (article) => {
+        // Her makalenin yazarını bul
+        const author = await User.findByPk(article.authorId, {
+          attributes: ["username", "image"], // Yazarın kullanıcı adı ve resmini al
+        });
 
-    console.log("ARTICLES : ", articlesWithAuthor);
-
-    res.status(200).json(articlesWithAuthor);
-  } catch (error) {
-    console.log("Error on /myfollows endpoint: ", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-router.get("/mynonfollowings", tokenControl, upload.none(), async (req, res) => {
-  try {
-    const userId = req._userId;
-
-    // Kullanıcının takip ettiği kişilerin listesini alın
-    const user = await User.findByPk(userId, {
-      include: [
-        {
-          model: User,
-          as: "Following",
-          attributes: ["id"],
-        },
-      ],
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "Kullanıcı bulunamadı." });
-    }
-
-    // Takip ettiğiniz kullanıcıların id'lerini bir diziye çıkartın
-    const followingIds = user.Following.map(following => following.id);
-
-    // Bu id'lerin dışında kalan yazarların makalelerini alın
-    const articles = await Article.findAll({
-      where: {
-        authorId: {
-          [Op.notIn]: followingIds, // Takip ettiğiniz kullanıcıların dışındakiler
-        },
-        [Op.not]: {
-          authorId: userId, // Kullanıcının kendi makalelerini de dışarda bırak
-        },
-      },
-      include: [
-        {
-          model: User,
-          as: "likedUsers",
-          attributes: ["id", "username"],
-          through: {
-            attributes: [],
-          },
-        },
-      ],
-    });
-    
-    const articlesWithAuthor = await Promise.all(articles.map(async (article) => {
-      // Her makalenin yazarını bul
-      const author = await User.findByPk(article.authorId, {
-        attributes: ['username', 'image'] // Yazarın kullanıcı adı ve resmini al
-      });
-    
-      return {
-        ...article.get({ plain: true }),
-        authorName: author.username, // Yazarın kullanıcı adını ekle
-        authorImage: author.image, // Yazarın kullanıcı adını ekle
-      };
-    }));
+        return {
+          ...article.get({ plain: true }),
+          authorName: author.username, // Yazarın kullanıcı adını ekle
+          authorImage: author.image, // Yazarın kullanıcı adını ekle
+        };
+      })
+    );
 
     //console.log("ARTICLES : ", articlesWithAuthor);
 
     res.status(200).json(articlesWithAuthor);
   } catch (error) {
-    console.log("Error on /nonfollowings endpoint: ", error.message);
+    //console.log("Error on /myfollows endpoint: ", error.message);
     res.status(500).json({ error: error.message });
   }
 });
+
+router.get(
+  "/mynonfollowings",
+  tokenControl,
+  upload.none(),
+  async (req, res) => {
+    try {
+      const userId = req._userId;
+
+      // Kullanıcının takip ettiği kişilerin listesini alın
+      const user = await User.findByPk(userId, {
+        include: [
+          {
+            model: User,
+            as: "Following",
+            attributes: ["id"],
+          },
+        ],
+      });
+
+      if (!user) {
+        return res.status(404).json({ message: "Kullanıcı bulunamadı." });
+      }
+
+      // Takip ettiğiniz kullanıcıların id'lerini bir diziye çıkartın
+      const followingIds = user.Following.map((following) => following.id);
+
+      // Bu id'lerin dışında kalan yazarların makalelerini alın
+      const articles = await Article.findAll({
+        where: {
+          authorId: {
+            [Op.notIn]: followingIds, // Takip ettiğiniz kullanıcıların dışındakiler
+          },
+          [Op.not]: {
+            authorId: userId, // Kullanıcının kendi makalelerini de dışarda bırak
+          },
+        },
+        include: [
+          {
+            model: User,
+            as: "likedUsers",
+            attributes: ["id", "username"],
+            through: {
+              attributes: [],
+            },
+          },
+        ],
+      });
+
+      const articlesWithAuthor = await Promise.all(
+        articles.map(async (article) => {
+          // Her makalenin yazarını bul
+          const author = await User.findByPk(article.authorId, {
+            attributes: ["username", "image"], // Yazarın kullanıcı adı ve resmini al
+          });
+
+          return {
+            ...article.get({ plain: true }),
+            authorName: author.username, // Yazarın kullanıcı adını ekle
+            authorImage: author.image, // Yazarın kullanıcı adını ekle
+          };
+        })
+      );
+
+      //console.log("ARTICLES : ", articlesWithAuthor);
+
+      res.status(200).json(articlesWithAuthor);
+    } catch (error) {
+      //console.log("Error on /nonfollowings endpoint: ", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
 
 router.get("/", tokenControl, upload.none(), async (req, res) => {
   try {
@@ -180,7 +189,6 @@ router.get("/", tokenControl, upload.none(), async (req, res) => {
 
 // Kullanıcının makaleleri, makaleleri beğenenlerle birlikte
 router.get("/self/", tokenControl, upload.none(), async (req, res) => {
-
   var userId = req._userId;
 
   try {
@@ -214,43 +222,48 @@ router.get("/self/", tokenControl, upload.none(), async (req, res) => {
   }
 });
 
-router.get("/ofUser/:authorid", tokenControl, upload.none(), async (req, res) => {
-  //console.log("authorId xx : ", req.params.authorid);
+router.get(
+  "/ofUser/:authorid",
+  tokenControl,
+  upload.none(),
+  async (req, res) => {
+    //console.log("authorId xx : ", req.params.authorid);
 
-  var userId = req.params.authorid;
+    var userId = req.params.authorid;
 
-  if (req.params.authorid != "") {
-    userId = req.params.authorid;
-  }
+    if (req.params.authorid != "") {
+      userId = req.params.authorid;
+    }
 
-  try {
-    //console.log("XXXXXXXXXXXXX1");
+    try {
+      //console.log("XXXXXXXXXXXXX1");
 
-    const articles = await Article.findAll({
-      where: {
-        authorId: userId,
-      },
-    });
-
-    for (const article of articles) {
-      const author = await User.findByPk(article.authorId);
-      article.dataValues.authorName = author.username;
-
-      const likedUsers = await article.getLikedUsers({
-        attributes: {
-          exclude: ["password"],
+      const articles = await Article.findAll({
+        where: {
+          authorId: userId,
         },
       });
 
-      article.dataValues.likedUsers = likedUsers;
-    }
+      for (const article of articles) {
+        const author = await User.findByPk(article.authorId);
+        article.dataValues.authorName = author.username;
 
-    res.status(200).json(articles);
-  } catch (error) {
-    console.log("error : ", error.message);
-    res.status(500).json({ error: error.message });
+        const likedUsers = await article.getLikedUsers({
+          attributes: {
+            exclude: ["password"],
+          },
+        });
+
+        article.dataValues.likedUsers = likedUsers;
+      }
+
+      res.status(200).json(articles);
+    } catch (error) {
+      //console.log("error : ", error.message);
+      res.status(500).json({ error: error.message });
+    }
   }
-});
+);
 
 // TODO : Henüz tamamlanmadı
 /*
@@ -329,9 +342,9 @@ router.get("/:id", tokenControl, upload.none(), async (req, res) => {
 
     res.status(200).json({ article, likedUsers });
   } catch (error) {
-    console.log("ARTICLES/error : ", error.message);
+    //console.log("ARTICLES/error : ", error.message);
 
-    res.status(400).json({ error: "ERROR" });
+    res.status(400).json({ error: "ERROR1" });
   }
 });
 
@@ -352,7 +365,7 @@ router.post("/shareArticle", tokenControl, upload.none(), async (req, res) => {
 
     logService.createLog(user.username, "Kullanıcı yeni makale paylaştı.");
   } catch (error) {
-    console.log("ARTICLES/error : ", error.message);
+    //console.log("ARTICLES/error : ", error.message);
 
     res.status(500).json({ error: error.message });
   }
@@ -396,7 +409,7 @@ router.put(
 
       logService.createLog(user.username, "Kullanıcı makalesini güncelledi.");
     } catch (error) {
-      console.log("ARTICLES/error : ", error.message);
+      //console.log("ARTICLES/error : ", error.message);
 
       res.status(500).json({ error: error.message });
     }
@@ -440,7 +453,7 @@ router.delete(
 
       logService.createLog(user.username, "Kullanıcı makalesini sildi.");
     } catch (error) {
-      console.log("ARTICLES/error : ", error.message);
+      //console.log("ARTICLES/error : ", error.message);
 
       res.status(500).json({ error: error.message });
     }
@@ -499,12 +512,12 @@ router.post(
 
       if (likedShares) {
         const notification = await Notification.create({
-          message: `${user.username} ${author.username} kullanıcısının makalesini beğendi.`,
+          message: `${user.username} likes ${author.username}'s post`,
           userId: author.id,
           time: new Date(),
         });
 
-        io.to(author.id).emit("new_notification", { notification });
+        io.to(author.id.toString()).emit("new_notification", { notification });
 
         res.status(200).json({ message: "Makale beğenildi." });
 
@@ -516,7 +529,7 @@ router.post(
         res.status(500).json({ message: "Makale beğenirken bir hata oluştu." });
       }
     } catch (error) {
-      console.log("ARTICLES/error : ", error.message);
+      //console.log("ARTICLES/error : ", error.message);
 
       res.status(500).json({ error: error.message });
     }
@@ -560,7 +573,7 @@ router.post(
         "Kullanıcı " + articleId + " id li makaledeki beğenisini kaldırdı."
       );
     } catch (error) {
-      console.log("ARTICLES/error : ", error.message);
+      //console.log("ARTICLES/error : ", error.message);
 
       res.status(500).json({ error: error.message });
     }

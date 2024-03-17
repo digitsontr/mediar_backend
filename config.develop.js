@@ -1,12 +1,12 @@
 const config = {
     dbConnection: {
-        dbName: "mediar",
-        username: "root",
-        password: "passw0rd",
+        dbName: "memoreng_developmediatlon",
+        username: "memoreng_mediatlonadmin",
+        password: "mediatlon_passw0rd",
         host: "localhost",
         dialect: "mysql",
         port: 3306,
     }
 }
 
-export default config;
+module.exports = config;
