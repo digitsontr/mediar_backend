@@ -377,7 +377,7 @@ router.put(
   upload.none(),
   async (req, res) => {
     try {
-      //console.log("XXXXXXXXXXXXX4");
+      console.log("\nXXXXXXXXXXXXX1");
 
       const articleId = req.params.id;
       const userId = req._userId;
@@ -390,6 +390,8 @@ router.put(
         return res.status(404).json({ message: "Makale bulunamadı." });
       }
 
+      console.log("\nXXXXXXXXXXXXX2");
+
       // Makaleyi güncellemeye çalışmadan önce, kullanıcının makalenin sahibi olduğunu kontrol edin
       if (article.authorId != userId) {
         return res
@@ -397,17 +399,24 @@ router.put(
           .json({ message: "Bu makaleyi güncellemeye yetkiniz yok." });
       }
 
+      console.log("\nXXXXXXXXXXXXX3");
+
       // Eğer kullanıcı makalenin sahibiyse, makaleyi güncelleyin
       await Article.update({ content }, { where: { id: articleId } });
+
+      console.log("\nXXXXXXXXXXXXX4");
 
       // Güncellenmiş makaleyi almak için bir kez daha sorgulama yapın
       const updatedArticle = await Article.findByPk(articleId);
 
-      res.status(200).json({ message: "Makale güncellendi.", updatedArticle });
+      console.log("\nXXXXXXXXXXXXX5");
 
-      const user = await User.findByPk(authorId);
-
+      // Yanıt gönderildikten sonra yapılacak işlemleri burada gerçekleştirin
+      const user = await User.findByPk(userId);
       logService.createLog(user.username, "Kullanıcı makalesini güncelledi.");
+
+      // Yanıt gönderme
+      res.status(200).json({ message: "Makale güncellendi.", updatedArticle });
     } catch (error) {
       //console.log("ARTICLES/error : ", error.message);
 
@@ -415,6 +424,7 @@ router.put(
     }
   }
 );
+
 
 // Makale silme
 router.delete(
