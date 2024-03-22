@@ -75,11 +75,8 @@ router.get("/articles", adminTokenControl, upload.none(), async (req, res) => {
 
 router.get("/logs", adminTokenControl, upload.none(), async (req, res) => {
   try {
-    //console.log("XXXXXXXXXXXXX1");
-
     const logs = await Log.findAll();
 
-    //console.log("0000000000");
     res.status(200).json(logs);
   } catch (error) {
     res.status(500).json({ error: error.message });
