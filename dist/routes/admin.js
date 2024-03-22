@@ -8,6 +8,7 @@ const {
 } = require("../services/jwtService");
 const Article = require("../models/article");
 const User = require("../models/user");
+const Log = require("../models/log");
 const Notification = require("../models/notification");
 
 //const { Op } = require("sequelize");
@@ -65,6 +66,20 @@ router.get("/articles", adminTokenControl, upload.none(), async (req, res) => {
 
     //console.log("0000000000");
     res.status(200).json(articles);
+  } catch (error) {
+    res.status(500).json({
+      error: error.message
+    });
+  }
+});
+router.get("/logs", adminTokenControl, upload.none(), async (req, res) => {
+  try {
+    //console.log("XXXXXXXXXXXXX1");
+
+    const logs = await Log.findAll();
+
+    //console.log("0000000000");
+    res.status(200).json(logs);
   } catch (error) {
     res.status(500).json({
       error: error.message
