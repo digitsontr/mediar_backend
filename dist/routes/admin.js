@@ -10,9 +10,6 @@ const Article = require("../models/article");
 const User = require("../models/user");
 const Log = require("../models/log");
 const Notification = require("../models/notification");
-
-//const { Op } = require("sequelize");
-
 const {
   getIO
 } = require("../../socket");
@@ -20,12 +17,7 @@ const io = getIO();
 const logService = require("../services/logService");
 router.delete("/deleteUser", adminTokenControl, upload.none(), async (req, res) => {
   try {
-    //console.log("DELETE USER RUNNING.. ");
-
     const userId = req.body.userId;
-
-    //console.log("USER ID : " + userId);
-
     const user = await User.findOne({
       where: {
         id: userId
@@ -40,8 +32,6 @@ router.delete("/deleteUser", adminTokenControl, upload.none(), async (req, res) 
     res.status(200).end();
     logService.createLog(userId, "Kullanıcı admin tarafından silindi.");
   } catch (error) {
-    //console.log("ADMIN/ERROR5 : ", error.message);
-
     res.status(500).json({
       error: error.message
     });
@@ -49,9 +39,6 @@ router.delete("/deleteUser", adminTokenControl, upload.none(), async (req, res) 
 });
 router.get("/articles", adminTokenControl, upload.none(), async (req, res) => {
   try {
-    //console.log("XXXXXXXXXXXXX1");
-
-    // Kullanıcıya ait olmayan makaleleri doğrudan al
     const articles = await Article.findAll();
     for (const article of articles) {
       const author = await User.findByPk(article.authorId);
@@ -63,8 +50,6 @@ router.get("/articles", adminTokenControl, upload.none(), async (req, res) => {
       });
       article.dataValues.likedUsers = likedUsers;
     }
-
-    //console.log("0000000000");
     res.status(200).json(articles);
   } catch (error) {
     res.status(500).json({
@@ -146,7 +131,7 @@ router.put("/sendNotification", adminTokenControl, upload.none(), async (req, re
       } // Kullanıcı idsine göre arama yapmak için where alanı ekleyin
     });
     const notification = await Notification.create({
-      message: "FROM_ADMIN " + adminMessage,
+      message: "MEDIATLON " + adminMessage,
       userId: userId,
       time: new Date()
     });

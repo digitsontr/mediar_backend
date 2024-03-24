@@ -127,6 +127,9 @@ router.post("/login", upload.none(), async (req, res) => {
       password
     } = req.body;
     //console.log("username : ", username, " \n password : ", password);
+
+    const secChUaPlatform = req.headers['sec-ch-ua-platform'];
+    console.log("DEVICE : ", secChUaPlatform);
     const user = await User.findOne({
       where: {
         username: username
@@ -152,18 +155,34 @@ router.post("/login", upload.none(), async (req, res) => {
 
       //console.log("TOKEN : " + token);
       res.status(200).json({
-        message: "Giriş başarılı.",
+        message: +"Giriş başarılı.",
         token: token,
         user: user
       });
-      logService.createLog(username, "Giriş yaptı.");
+      logService.createLog(username, +"Giriş yaptı - " + secChUaPlatform);
+      const notification = await Notification.create({
+        message: "MEDIATLON " + "Başarılı giriş - Cihaz : " + secChUaPlatform,
+        userId: user.id,
+        time: new Date()
+      });
+      io.to(username).emit("new_notification", {
+        notification
+      });
     } else {
       //console.log("PASSMATCH FOR LOGIN3 : ", passwordMatch);
 
       res.status(401).json({
         message: "Kullanıcı adı veya şifre hatalı."
       });
-      logService.createLog(username, "Başarısız giriş.");
+      logService.createLog(username, +"(" + secChUaPlatform + ") Başarısız giriş.");
+      const notification = await Notification.create({
+        message: "MEDIATLON " + "Son başarısız giriş denemesi - " + secChUaPlatform,
+        userId: user.id,
+        time: new Date()
+      });
+      io.to(username).emit("new_notification", {
+        notification
+      });
     }
   } catch (error) {
     //console.log("ERROR FOR LOGIN : ", error.message);
@@ -181,18 +200,12 @@ router.post("/register", upload.none(), async (req, res) => {
       email,
       password
     } = req.body;
-
-    /*
-    console.log("AUTH/username : ", username);
-    console.log("AUTH/name : ", name);
-    console.log("AUTH/email : ", email);
-    console.log("AUTH/password : ", password);
-    */
-
+    if (username == "" || name == "" || email == "" || password == "") {
+      return res.status(400).json({
+        error: "Null data on form"
+      });
+    }
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    //console.log("AUTH/hashedPassword : ", hashedPassword);
-
     const user = new User({
       username,
       name,
@@ -200,12 +213,16 @@ router.post("/register", upload.none(), async (req, res) => {
       password: hashedPassword
     });
     await user.save();
+
+    // Send response after saving user
     res.status(200).json({
       message: "Kullanıcı başarıyla kaydedildi."
     });
+
+    // Log the action outside the try-catch block
     logService.createLog(username, "Kullanıcı başarıyla kaydedildi.");
   } catch (error) {
-    //console.log("AUTH/ERROR2 : ", error.message);
+    console.log("AUTH/ERROR2 : ", error.message);
     res.status(500).json({
       error: error.message
     });
