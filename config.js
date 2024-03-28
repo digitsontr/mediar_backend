@@ -3,7 +3,7 @@ const config = {
         dbName: "mediar",
         username: "root",
         password: "passw0rd",
-        host: "localhost",
+        host: "mediatlon.com",
         dialect: "mysql",
         port: 3306,
     }

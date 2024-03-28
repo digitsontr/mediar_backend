@@ -35,7 +35,7 @@ passport.use(
     {
       clientID: GOOGLE_CLIENT_ID,
       clientSecret: GOOGLE_CLIENT_SECRET,
-      callbackURL: "http://localhost:80/auth/google/callback",
+      callbackURL: "http://mediatlon.com/auth/google/callback",
       passReqToCallback: true,
     },
     function (request, accessToken, refreshToken, profile, done) {
@@ -115,7 +115,7 @@ router.get(
 
       // Token ile yanıt dön
       res.redirect(
-        `http://localhost:3002/google_login_success?token=${token}&userData=${JSON.stringify(
+        `https://mediatlon.com/google_login_success?token=${token}&userData=${JSON.stringify(
           payload
         )}`
       );
