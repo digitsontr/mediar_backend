@@ -32,7 +32,7 @@ const GOOGLE_CLIENT_SECRET = process.env["GOOGLE_CLIENT_SECRET"];
 passport.use(new GoogleStrategy({
   clientID: GOOGLE_CLIENT_ID,
   clientSecret: GOOGLE_CLIENT_SECRET,
-  callbackURL: "http://localhost:3000/auth/google/callback",
+  callbackURL: "http://mediatlon.com/auth/google/callback",
   passReqToCallback: true
 }, function (request, accessToken, refreshToken, profile, done) {
   done(null, profile);
@@ -104,7 +104,7 @@ router.get("/google/callback", passport.authenticate("google", {
     const token = generateToken(payload);
 
     // Token ile yanıt dön
-    res.redirect(`http://localhost:3002/google_login_success?token=${token}&userData=${JSON.stringify(payload)}`);
+    res.redirect(`https://mediatlon.com/google_login_success?token=${token}&userData=${JSON.stringify(payload)}`);
     logService.createLog(user.username, user.username + " Giriş yaptı.");
 
     //res.status(200).json({ message: 'Giriş başarılı.', token: token, user: user });
